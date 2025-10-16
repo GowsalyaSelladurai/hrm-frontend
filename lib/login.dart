@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:provider/provider.dart';
@@ -7,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:zeai_project/admin_dashboard.dart' as admin;
 import 'package:zeai_project/employee_dashboard.dart' as employee;
-//import 'package:zeai_project/super_admin.dart' as superadmin;
 import 'package:zeai_project/superadmin_dashboard.dart' as superadmin;
 
 import 'user_provider.dart';
@@ -70,7 +68,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://hrm-backend-rm6c.onrender.com/api/employee-login'),
+        Uri.parse('https://zeai-hrm-1.onrender.com/api/employee-login'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'employeeId': employeeIdController.text.trim(),
@@ -104,18 +102,14 @@ class _LoginPageState extends State<LoginPage> {
               MaterialPageRoute(
                   builder: (context) => const admin.AdminDashboard()),
             );
-          }  
-          else if (position == "Founder" ||
-              position == "HR" ||
-              position == "SuperAdmin") {
+          } else if (position == "Founder") {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => const superadmin.SuperAdminDashboard(),
-              ),
+                  builder: (context) =>
+                      const superadmin.SuperAdminDashboard()),
             );
-          }
-          else {
+          } else {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
@@ -188,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
 
           return Column(
             children: [
-              // ✅ Top Navbar
+              // ✅ Top Navbar (search removed)
               Container(
                 height: 80,
                 decoration: const BoxDecoration(
@@ -199,50 +193,25 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 child: Row(
-                  children: [
-                    const SizedBox(width: 16),
-                    const FaIcon(FontAwesomeIcons.chevronLeft,
-                        color: Colors.white, size: 30),
-                    const SizedBox(width: 16),
-                    const FaIcon(FontAwesomeIcons.chevronRight,
-                        color: Colors.white, size: 30),
-                    const SizedBox(width: 18),
-                    const Image(
+                  children: const [
+                    SizedBox(width: 16),
+                    //FaIcon(FontAwesomeIcons.chevronLeft,
+                        //color: Colors.white, size: 30),
+                    //SizedBox(width: 16),
+                    //FaIcon(FontAwesomeIcons.chevronRight,
+                        //color: Colors.white, size: 30),
+                    //SizedBox(width: 18),
+                    Image(
                         image: AssetImage('assets/logo_z.png'),
-                        width: 40,
-                        height: 40),
-                    const SizedBox(width: 70),
-                    const Spacer(),
-                    const Image(
+                        width: 100,
+                        height: 50),
+                    //SizedBox(width:70),
+                    Spacer(),
+                    Image(
                         image: AssetImage('assets/logo_zeai.png'),
                         width: 140,
                         height: 140),
-                    const Spacer(),
-                    Container(
-                      width: 300,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          hintText: 'Search here..',
-                          hintStyle: const TextStyle(
-                            color: Colors.white70,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          filled: true,
-                          fillColor: const Color(0xFF2C2C3E),
-                          suffixIcon: const Icon(FontAwesomeIcons.magnifyingGlass,
-                              color: Colors.white),
-                          contentPadding: const EdgeInsets.only(
-                              left: 20, top: 16, bottom: 16),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 700),
                   ],
                 ),
               ),
