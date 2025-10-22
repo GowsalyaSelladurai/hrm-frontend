@@ -39,7 +39,15 @@ const PORT = process.env.PORT || 5000;
 //   console.log(`📥 ${req.method} ${req.originalUrl}`);
 //   next();
 // });
-app.use(cors());
+// app.use(cors());
+app.use(cors({
+  origin: [
+    "https://zeaisoft-hrm.netlify.app/", // 🔁 Replace with your actual Netlify domain
+    //"http://localhost:3000" // for local testing (optional)
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
