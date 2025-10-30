@@ -85,7 +85,7 @@ try {
   /// 🔹 Fetch SMS Notifications
   Future<void> fetchSmsNotifications() async {
     final uri = Uri.parse(
-        "https://hrm-backend-rm6c.onrender.com/notifications/employee/${widget.empId}?month=$selectedMonth&category=message");
+        "https://zeai-hrm-1.onrender.com/notifications/employee/${widget.empId}?month=$selectedMonth&category=message");
     final resp = await http.get(uri);
 
     if (resp.statusCode == 200) {
@@ -109,7 +109,7 @@ try {
   Future<void> fetchPerformanceNotifications() async {
     final uri = Uri.parse(
         //"http://localhost:5000/api/notifications/$selectedMonth/${widget.empId}");
-        "https://hrm-backend-rm6c.onrender.com/notifications/performance/admin/$selectedMonth/${widget.empId}");
+        "https://zeai-hrm-1.onrender.com/notifications/performance/admin/$selectedMonth/${widget.empId}");
     final resp = await http.get(uri);
 
     if (resp.statusCode == 200) {
@@ -147,7 +147,7 @@ try {
   }
   Future<void> fetchHolidayNotifications() async {
   final uri = Uri.parse(
-      "https://hrm-backend-rm6c.onrender.com/notifications/holiday/admin/$selectedMonth");
+      "https://zeai-hrm-1.onrender.com/notifications/holiday/admin/$selectedMonth");
   final resp = await http.get(uri);
 
   if (resp.statusCode == 200) {
@@ -347,7 +347,42 @@ try {
                     ],
                   ),
                 ),
-                
+                // ✅ Only show "View" for SMS in SMS list
+                // if ((category == "sms" && sms.contains(notif)) ||
+                //   (category == "performance" && performance.contains(notif)))
+                //   TextButton(
+                //     onPressed: () {
+                //       Navigator.push(
+                //         context,
+                //         MaterialPageRoute(
+                //           builder: (c) => ReportsAnalyticsPage(),
+                //         ),
+                //       );
+                //     },
+                //     style: TextButton.styleFrom(
+                //       backgroundColor: Colors.black,
+                //       foregroundColor: Colors.white,
+                //     ),
+                //     child: const Text("View"),
+                //   ),
+/*
+                  if (category.toLowerCase() == "performance")
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (c) => ReportsAnalyticsPage(),
+                        ),
+                      );
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text("View"),
+                  ),
+                  */
               ],
             ),
           ),

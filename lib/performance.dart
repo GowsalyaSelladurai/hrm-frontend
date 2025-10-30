@@ -23,7 +23,7 @@ class _PerformanceState extends State<Performance> {
   }
 
   Future<void> fetchPerformanceData() async {
-    var url = Uri.parse('https://hrm-backend-rm6c.onrender.com/perform/performance/all');
+    var url = Uri.parse('https://zeai-hrm-1.onrender.com/perform/performance/all');
 
     try {
       var response = await http.get(url);

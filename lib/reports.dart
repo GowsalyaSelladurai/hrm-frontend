@@ -67,7 +67,7 @@ class ReportsAnalyticsPage extends StatefulWidget {
 }
 
 class _ReportsAnalyticsPageState extends State<ReportsAnalyticsPage> {
-  final String apiBase = 'https://hrm-backend-rm6c.onrender.com';
+  final String apiBase = 'https://zeai-hrm-1.onrender.com';
   final String listPath = '/reports';
   final String detailsPath = '/reports';
 
@@ -624,7 +624,7 @@ Future<void> fetchLeaveStatus() async {
     );
   }
 
-  String _formatDate(dynamic iso) {
+ String _formatDate(dynamic iso) {
   if (iso == null) return 'N/A';
   try {
     final dt = DateTime.parse(iso.toString()).toLocal();
@@ -633,6 +633,7 @@ Future<void> fetchLeaveStatus() async {
     return iso.toString();
   }
 }
+
   void _showSnack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));

@@ -49,10 +49,6 @@ function getToday() {
 
 // ------------------ Routes ------------------ //
 
-router.get("/", (req, res) => {
-  res.send("Employee route working");
-});
-
 // ------------------ Employee Login ------------------ //
 router.post("/employee-login", async (req, res) => {
   const { employeeId, employeeName, position } = req.body;

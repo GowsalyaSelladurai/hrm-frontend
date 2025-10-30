@@ -227,8 +227,13 @@ router.get("/leave-approvals/:employeeId", async (req, res) => {
     let role = normalize(approverUser.position);
 
 // 🔹 Founder and HR can both view same pending list
-    let approverRoles =
-      role === "founder" || role === "hr" ? ["founder", "hr"] : [role];
+    let approverRoles;
+if (role === "founder" || role === "hr" || role === "superadmin") {
+  approverRoles = ["admin", "founder", "hr"]; // ✅ all pending
+} else {
+  approverRoles = [role];
+}
+
 
     const leaves = await Leave.find({
       approver: { $in: approverRoles },
@@ -247,8 +252,15 @@ router.get("/leave-approvals/:employeeId", async (req, res) => {
 router.get("/all/by-role/:role", async (req, res) => {
   try {
     const role = normalize(req.params.role);
+
+    let approverRoles = [role];
+    if (role === "founder" || role === "hr" || role === "superadmin") {
+      approverRoles = ["admin", "founder", "hr"]; // ✅ see all pending
+    }
+
     const leaves = await Leave.find({
-      approver: role, status: { $in: ["Pending"] },
+      approver: { $in: approverRoles },
+      status: { $in: ["Pending"] },
     }).sort({ createdAt: -1 });
 
     res.json({ items: leaves.map(formatLeaveDates) });
@@ -256,6 +268,7 @@ router.get("/all/by-role/:role", async (req, res) => {
     res.status(500).json({ message: "❌ Internal server error" });
   }
 });
+
 
 // Fetch All Leaves
 router.get("/all", async (req, res) => {
@@ -306,21 +319,30 @@ router.get("/get-employee-name/:employeeId", async (req, res) => {
 });
 
 
-// ✅ Pending count for Admin / Founder / HR dashboards
+// ✅ Pending count for Admin / Founder / HR / SuperAdmin dashboards
 router.get("/pending-count", async (req, res) => {
   try {
-    const approver = normalize(req.query.approver); // admin | founder | hr
+    const approver = normalize(req.query.approver); // admin | founder | hr | superadmin
     if (!approver)
       return res.status(400).json({ message: "❌ approver is required" });
 
-    // 🔹 Admin sees employee requests → approver=admin
-    // 🔹 Founder or HR see admin requests → approver in ["founder", "hr"]
     let matchCondition = { status: "Pending" };
 
-    if (approver === "founder" || approver === "hr") {
-      matchCondition.approver = { $in: ["founder", "hr"] };
+    if (approver === "superadmin" || approver === "founder" || approver === "hr") {
+      // ✅ SuperAdmin, Founder, HR see pending requests from admins and employees
+      matchCondition = {
+        status: "Pending",
+        approver: { $in: ["admin", "founder", "hr"] },
+      };
+    } else if (approver === "admin") {
+      // ✅ Admin sees only employee requests
+      matchCondition = {
+        status: "Pending",
+        approver: "admin",
+      };
     } else {
-      matchCondition.approver = approver;
+      // Employees don’t approve anything
+      matchCondition = { _id: null };
     }
 
     const count = await Leave.countDocuments(matchCondition);
@@ -443,7 +465,7 @@ async function updateStatus(req, res) {
     const updatedLeave = await Leave.findByIdAndUpdate(id, { status }, { new: true });
     if (!updatedLeave) return res.status(404).json({ message: "❌ Leave not found" });
 
-    res.json({ message: `✅ Leave ${status}`, leave: formatLeaveDates(updatedLeave) });
+    res.json({ message:`✅ Leave ${status}`, leave: formatLeaveDates(updatedLeave) });
   } catch (err) {
     res.status(500).json({ message: "❌ Server error" });
   }

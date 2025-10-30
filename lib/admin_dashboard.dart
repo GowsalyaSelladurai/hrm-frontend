@@ -16,6 +16,8 @@ import 'attendance_login.dart';
 import 'event_banner_slider.dart';
 import 'leave_approval.dart';
 import 'adminperformance.dart'; // ✅ for Performance Review
+import 'package:intl/intl.dart';
+
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -59,7 +61,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     try {
       final response = await http.get(
-        Uri.parse("https://hrm-backend-rm6c.onrender.com/get-employee-name/$employeeId"),
+        Uri.parse("https://zeai-hrm-1.onrender.com/get-employee-name/$employeeId"),
       );
 
       if (response.statusCode == 200) {
@@ -91,7 +93,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       final year = DateTime.now().year;
       final url =
-          "https://hrm-backend-rm6c.onrender.com/apply/leave-balance/$employeeId?year=$year";
+          "https://zeai-hrm-1.onrender.com/apply/leave-balance/$employeeId?year=$year";
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -127,7 +129,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> fetchPendingCount(String userRole) async {
     try {
       final response = await http.get(
-        Uri.parse("https://hrm-backend-rm6c.onrender.com/apply/pending-count?approver=$userRole"),
+        Uri.parse("https://zeai-hrm-1.onrender.com/apply/pending-count?approver=$userRole"),
       );
 
       if (response.statusCode == 200) {
@@ -146,7 +148,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _deleteEmployeeComment(String id) async {
     try {
       final response = await http.delete(
-        Uri.parse("https://hrm-backend-rm6c.onrender.com/review-decision/$id"),
+        Uri.parse("https://zeai-hrm-1.onrender.com/review-decision/$id"),
       );
 
       if (response.statusCode == 200) {
@@ -169,7 +171,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _showEmployeeComments() async {
   try {
     final response = await http.get(
-      Uri.parse("https://hrm-backend-rm6c.onrender.com/review-decision/feedback?positions=employee,intern"),
+      Uri.parse("https://zeai-hrm-1.onrender.com/review-decision/feedback?positions=employee,intern"),
       headers: {"Accept": "application/json"},
     );
 
@@ -262,7 +264,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 }
 
 
-  /// ✅ Helper: format date nicely
+  /*// ✅ Helper: format date nicely
   String _formatDate(dynamic iso) {
     if (iso == null) return 'N/A';
     try {
@@ -273,7 +275,18 @@ class _AdminDashboardState extends State<AdminDashboard> {
     } catch (_) {
       return iso.toString();
     }
+  }*/
+  String _formatDate(dynamic dateStr) {
+  if (dateStr == null) return '';
+  try {
+    final parsed = DateTime.tryParse(dateStr.toString());
+    if (parsed == null) return dateStr.toString();
+    return DateFormat('yyyy-MM-dd hh:mm a').format(parsed.toLocal());
+  } catch (e) {
+    return dateStr.toString();
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -387,7 +400,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     context,
                     MaterialPageRoute(
                       builder: (context) =>
-                           LeaveApprovalPage(userRole: "admin"),
+                          const LeaveApprovalPage(userRole: "admin"),
                     ),
                   ).then((_) {
                     // refresh badge after returning

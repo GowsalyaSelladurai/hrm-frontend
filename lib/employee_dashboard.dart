@@ -52,7 +52,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://hrm-backend-rm6c.onrender.com/get-employee-name/$employeeId'),
+        Uri.parse('https://zeai-hrm-1.onrender.com/get-employee-name/$employeeId'),
       );
 
       if (response.statusCode == 200) {
@@ -81,7 +81,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard> {
       }
 
       final year = DateTime.now().year;
-      final url = "https://hrm-backend-rm6c.onrender.com/apply/leave-balance/$employeeId?year=$year";
+      final url = "https://zeai-hrm-1.onrender.com/apply/leave-balance/$employeeId?year=$year";
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {

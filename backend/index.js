@@ -43,7 +43,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     "https://zeaisoft-hrm.netlify.app/", // 🔁 Replace with your actual Netlify domain
-    //"http://localhost:3000" // for local testing (optional)
+    // "http://localhost:3000" // for local testing (optional)
   ],
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true

@@ -17,7 +17,7 @@ class _LeaveListState extends State<LeaveList> {
   Future<void> fetchLeaves() async {
     try {
       final response = await http.get(
-        Uri.parse('https://hrm-backend-rm6c.onrender.com/api/leave'), // Android emulator
+        Uri.parse('https://zeai-hrm-1.onrender.com/api/leave'), // Android emulator
         headers: {'Content-Type': 'application/json'},
       );
 

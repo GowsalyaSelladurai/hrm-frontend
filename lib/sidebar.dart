@@ -34,7 +34,6 @@ class Sidebar extends StatefulWidget {
 class _SidebarState extends State<Sidebar> {
   String employeeName = "Employee";
   String position = "Position";
-  String employeeImage = ""; 
 
   @override
   void initState() {
@@ -51,7 +50,7 @@ class _SidebarState extends State<Sidebar> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://hrm-backend-rm6c.onrender.com/get-employee-name/$employeeId'),
+        Uri.parse('https://zeai-hrm-1.onrender.com/get-employee-name/$employeeId'),
       );
 
       if (response.statusCode == 200) {
@@ -59,9 +58,6 @@ class _SidebarState extends State<Sidebar> {
         setState(() {
           employeeName = data['employeeName'] ?? 'Employee';
           position = data['position'] ?? 'Position';
-          employeeImage = data['employeeImage'] != null && data['employeeImage'].isNotEmpty
-              ? "https://hrm-backend-rm6c.onrender.com${data['employeeImage']}"
-              : ""; 
         });
         // ✅ Update provider safely after API call
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -255,7 +251,7 @@ Widget _buildSidebar(BuildContext context) {
   // Select Dashboard based on role
   Widget getDashboard() {
     if (role == "Admin") return const AdminDashboard();
-    if (role == "Founder") return const SuperAdminDashboard();
+    if (role == "Founder"||role == "HR") return const SuperAdminDashboard();
     return const EmployeeDashboard();
   }
 
@@ -273,17 +269,9 @@ Widget _buildSidebar(BuildContext context) {
         children: [
           const SizedBox(height: 40),
           ListTile(
-            leading: CircleAvatar(
-            radius: 25,
-            backgroundColor: Colors.grey[300],
-            backgroundImage: employeeImage.isNotEmpty
-                ? NetworkImage(employeeImage)
-                : const AssetImage('assets/profile.png') as ImageProvider,
-            onBackgroundImageError: (_, __) {
-              debugPrint('⚠️ Failed to load employee image: $employeeImage');
-            },
-          ),
-
+            leading: const CircleAvatar(
+              backgroundImage: AssetImage('assets/profile.png'),
+            ),
             title: Text(
               employeeName,
               style: const TextStyle(fontWeight: FontWeight.bold),
@@ -310,7 +298,7 @@ Widget _buildSidebar(BuildContext context) {
               Icons.notifications,
               'Notifications',
               context,
-              (role == "Admin" || role == "Founder")
+              (role == "Admin" || role == "Founder"||role == "HR")
                   ? AdminNotificationsPage(empId: userProvider.employeeId ?? '')
                   : EmployeeNotificationsPage(
                     empId: userProvider.employeeId ?? '',

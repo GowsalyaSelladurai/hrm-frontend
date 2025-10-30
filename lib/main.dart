@@ -58,8 +58,8 @@ class MyApp extends StatelessWidget {
         '/company_events': (context) => const CompanyEventsScreen(),
         '/attendance-status': (context) => AttendanceScreen(),
         '/leave-list': (context) => const LeaveList(),
-        '/leave-approval': (context) =>  LeaveApprovalPage(userRole: "admin"),
-        '/leave-approval-super': (context) =>  LeaveApprovalPage(userRole: "founder"),
+        '/leave-approval': (context) => const LeaveApprovalPage(userRole: "Admin"),
+        '/leave-approval-super': (context) => const LeaveApprovalPage(userRole: "Founder"),
         '/upload': (context) => const UploadScreen(),
       },
     );

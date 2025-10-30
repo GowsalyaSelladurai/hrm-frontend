@@ -16,7 +16,7 @@ class LeaveApprovalPage extends StatefulWidget {
 }
 
 class _LeaveApprovalPageState extends State<LeaveApprovalPage> {
-  final String apiUrl = "https://hrm-backend-rm6c.onrender.com/apply";
+  final String apiUrl = "https://zeai-hrm-1.onrender.com/apply";
 
   List<dynamic> leaveRequests = [];
   List<dynamic> filteredLeaves = [];

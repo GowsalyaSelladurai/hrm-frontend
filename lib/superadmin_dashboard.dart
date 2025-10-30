@@ -70,7 +70,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   }
 
   /// Fetch employee name from backend.
-  /// Attempts the common `/api/employees/:id` route first, then falls back to `/get-employee-name/:id`.
+  /// Attempts the common /api/employees/:id route first, then falls back to /get-employee-name/:id.
   /// Fetch employee name from backend (single endpoint now).
 Future<void> fetchEmployeeName() async {
   final employeeId =
@@ -82,7 +82,7 @@ Future<void> fetchEmployeeName() async {
   }
 
   try {
-    final uri = Uri.parse("https://hrm-backend-rm6c.onrender.com/api/employees/$employeeId");
+    final uri = Uri.parse("https://zeai-hrm-1.onrender.com/api/employees/$employeeId");
     final resp = await http.get(uri);
 
     if (resp.statusCode == 200) {
@@ -117,7 +117,7 @@ Future<void> fetchEmployeeName() async {
 
       final year = DateTime.now().year;
       final url =
-          "https://hrm-backend-rm6c.onrender.com/apply/leave-balance/$employeeId?year=$year";
+          "https://zeai-hrm-1.onrender.com/apply/leave-balance/$employeeId?year=$year";
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -153,7 +153,7 @@ Future<void> fetchEmployeeName() async {
    Future<int> fetchPendingCount(String userRole) async {
     try {
       final response = await http.get(
-        Uri.parse("https://hrm-backend-rm6c.onrender.com/apply/pending-count?approver=$userRole"),
+        Uri.parse("https://zeai-hrm-1.onrender.com/apply/pending-count?approver=$userRole"),
       );
 
       if (response.statusCode == 200) {
@@ -173,12 +173,12 @@ Future<void> fetchEmployeeName() async {
   Future<void> _deleteEmployeeComment(String id) async {
     try {
       final response = await http.delete(
-        Uri.parse("https://hrm-backend-rm6c.onrender.com/review-decision/$id"),
+        Uri.parse("https://zeai-hrm-1.onrender.com/review-decision/$id"),
       );
 
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("🗑️ Comment deleted successfully")),
+          const SnackBar(content: Text("🗑 Comment deleted successfully")),
         );
         Navigator.of(context).pop(); // close current dialog
         await _showEmployeeComments(); // refresh dialog
@@ -198,7 +198,7 @@ Future<void> fetchEmployeeName() async {
   Future<void> _showEmployeeComments() async {
     try {
       final response = await http.get(
-        Uri.parse("https://hrm-backend-rm6c.onrender.com/review-decision"),
+        Uri.parse("https://zeai-hrm-1.onrender.com/review-decision"),
         headers: {"Accept": "application/json"},
       );
 
@@ -484,7 +484,7 @@ Future<void> fetchEmployeeName() async {
                         try {
                           var request = http.MultipartRequest(
                             'POST',
-                            Uri.parse("https://hrm-backend-rm6c.onrender.com/api/employees"),
+                            Uri.parse("https://zeai-hrm-1.onrender.com/api/employees"),
                           );
 
                           request.fields['employeeId'] = empId;
@@ -598,7 +598,7 @@ Future<void> fetchEmployeeName() async {
   Future<List<dynamic>> _fetchPendingRequests() async {
     try {
       final response = await http.get(
-        Uri.parse("https://hrm-backend-rm6c.onrender.com/requests?status=pending"),
+        Uri.parse("https://zeai-hrm-1.onrender.com/requests?status=pending"),
         headers: {"Accept": "application/json"},
       );
       if (response.statusCode == 200) {
@@ -613,7 +613,7 @@ Future<void> fetchEmployeeName() async {
   Future<void> _approveRequest(String requestId) async {
     try {
       final response = await http.post(
-        Uri.parse('https://hrm-backend-rm6c.onrender.com/requests/$requestId/approve'),
+        Uri.parse('https://zeai-hrm-1.onrender.com/requests/$requestId/approve'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'resolvedBy':
@@ -638,7 +638,7 @@ Future<void> fetchEmployeeName() async {
   Future<void> _declineRequest(String requestId) async {
     try {
       final response = await http.post(
-        Uri.parse('https://hrm-backend-rm6c.onrender.com/requests/$requestId/decline'),
+        Uri.parse('https://zeai-hrm-1.onrender.com/requests/$requestId/decline'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'resolvedBy':
@@ -793,7 +793,14 @@ Future<void> fetchEmployeeName() async {
 
   Widget _buildQuickActions(BuildContext context) {
     final role = Provider.of<UserProvider>(context, listen: false).position?.toLowerCase() ?? "founder";
-    final approverRole = (role == "hr") ? "hr" : "founder";
+    // final approverRole = (role == "hr") ? "hr" : "founder";
+    final approverRole = 
+    (role == "superadmin") ? "superadmin" :
+    (role == "hr") ? "hr" :
+    (role == "founder") ? "founder" :
+    (role == "admin") ? "admin" :
+    "employee";
+
     return Center(
       child: Wrap(
         spacing: 90,

@@ -68,7 +68,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://zeai-hrm-1.onrender.com/api/employee-login'),
+        Uri.parse('https://zeai-hrm-1.onrender.com/api/employee-login'),//change youur render url here!
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'employeeId': employeeIdController.text.trim(),
@@ -102,9 +102,7 @@ class _LoginPageState extends State<LoginPage> {
               MaterialPageRoute(
                   builder: (context) => const admin.AdminDashboard()),
             );
-          } else if (position == "Founder" ||
-              position == "HR" ||
-              position == "SuperAdmin") {
+          } else if (position == "Founder"||position == "HR") {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
