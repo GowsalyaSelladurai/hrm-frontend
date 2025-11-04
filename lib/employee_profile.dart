@@ -276,7 +276,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5000/profile/$employeeId'),
+        Uri.parse('https://zeai-hrm-1.onrender.com/profile/$employeeId'),
       );
       if (response.statusCode == 200) {
         setState(() {
@@ -303,7 +303,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
     try {
       final url =
-          Uri.parse('http://localhost:5000/requests/profile/$employeeId/request-change');
+          Uri.parse('https://zeai-hrm-1.onrender.com/requests/profile/$employeeId/request-change');
       final body = jsonEncode({
         'fullName': employee?.fullName ?? '', 
         'field': field,
@@ -368,7 +368,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
   if (employeeId == null) return;
 
   try {
-    final uri = Uri.parse("http://localhost:5000/upload/$employeeId");
+    final uri = Uri.parse("https://zeai-hrm-1.onrender.com/upload/$employeeId");
     final request = http.MultipartRequest('POST', uri);
 
     // Determine a simple contentType based on extension (avoid adding extra package)
@@ -582,7 +582,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                   Provider.of<UserProvider>(context, listen: false).employeeId;
               await http.post(
                 Uri.parse(
-                    'http://localhost:5000/profile/$employeeId/experience'),
+                    'https://zeai-hrm-1.onrender.com/profile/$employeeId/experience'),
                 headers: {'Content-Type': 'application/json'},
                 body: jsonEncode(experience),
               );
@@ -635,7 +635,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                 if (hasFile)
                   TextButton(
                     onPressed: () async {
-                      final url = "http://localhost:5000$filePath";
+                      final url = "https://zeai-hrm-1.onrender.com$filePath";
                       if (await canLaunchUrl(Uri.parse(url))) {
                         await launchUrl(Uri.parse(url),
                             mode: LaunchMode.externalApplication);
@@ -820,7 +820,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
             try {
               final response = await http.put(
                 Uri.parse(
-                    'http://localhost:5000/profile/$employeeId/experience/${exp.id}'),
+                    'https://zeai-hrm-1.onrender.com/profile/$employeeId/experience/${exp.id}'),
                 headers: {'Content-Type': 'application/json'},
                 body: jsonEncode(updatedExp),
               );
@@ -865,7 +865,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
   try {
     final response = await http.delete(
-      Uri.parse('http://localhost:5000/profile/$employeeId/experience/${exp.id}'),
+      Uri.parse('https://zeai-hrm-1.onrender.com/profile/$employeeId/experience/${exp.id}'),
     );
 
     if (response.statusCode == 200) {

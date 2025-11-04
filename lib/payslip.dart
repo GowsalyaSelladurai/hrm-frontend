@@ -76,7 +76,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
   }
 
   Future<int> fetchWorkingDays(String employeeId, int month, int year) async {
-    var url = Uri.parse("http://localhost:5000/attendance/attendance/history/$employeeId");
+    var url = Uri.parse("https://zeai-hrm-1.onrender.com/attendance/attendance/history/$employeeId");
     var response = await http.get(url);
 
     if (response.statusCode == 200) {
@@ -113,7 +113,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
     }
 
     final url = Uri.parse(
-      'http://localhost:5000/get-payslip-details?employee_id=$employeeId&year=$selectedYear&month=$selectedMonth',
+      'https://zeai-hrm-1.onrender.com/get-payslip-details?employee_id=$employeeId&year=$selectedYear&month=$selectedMonth',
     );
 
     try {
@@ -170,7 +170,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
   Future<void> _updateWorkdaysInBackend(
     String employeeId, String year, String month, int workdays) async {
   try {
-    final url = Uri.parse("http://localhost:5000/payslip/update-workdays");
+    final url = Uri.parse("https://zeai-hrm-1.onrender.com/payslip/update-workdays");
     final response = await http.post(
       url,
       headers: {"Content-Type": "application/json"},

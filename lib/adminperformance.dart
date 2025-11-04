@@ -70,7 +70,7 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5000/api/employees/domain/$domain'),
+        Uri.parse('https://zeai-hrm-1.onrender.com/api/employees/domain/$domain'),
       );
 
       if (response.statusCode == 200) {
@@ -103,7 +103,7 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
       return;
     }
 
-    final url = Uri.parse('http://localhost:5000/reviews');
+    final url = Uri.parse('https://zeai-hrm-1.onrender.com/reviews');
     final reviewerName =
         Provider.of<UserProvider>(context, listen: false).employeeName ??
         'Admin';
@@ -135,7 +135,7 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
         );
 
         // 🔔 Create notifications
-        final notifUrl = Uri.parse("http://localhost:5000/notifications");
+        final notifUrl = Uri.parse("https://zeai-hrm-1.onrender.com/notifications");
         String currentMonth = getCurrentMonth();
         final userProvider = Provider.of<UserProvider>(context, listen: false);
         final adminName = userProvider.employeeName ?? 'Admin';
