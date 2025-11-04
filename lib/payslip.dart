@@ -138,7 +138,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
         int noOfWorkdays = await fetchWorkingDays(employeeId, monthIndex, int.parse(selectedYear));
 
         // Optionally update backend payslip with correct workdays
-        await _updateWorkdaysInBackend(employeeId, selectedYear, selectedMonth, noOfWorkdays);
+        // await _updateWorkdaysInBackend(employeeId, selectedYear, selectedMonth, noOfWorkdays);
       // }
 
         setState(() {
@@ -167,30 +167,30 @@ class _PayslipScreenState extends State<PayslipScreen> {
       print("❌ Network error: $e");
     }
   }
-  Future<void> _updateWorkdaysInBackend(
-    String employeeId, String year, String month, int workdays) async {
-  try {
-    final url = Uri.parse("https://zeai-hrm-1.onrender.com/payslip/update-workdays");
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "employee_id": employeeId,
-        "year": year,
-        "month": month,
-        "no_of_workdays": workdays,
-      }),
-    );
+//   Future<void> _updateWorkdaysInBackend(
+//     String employeeId, String year, String month, int workdays) async {
+//   try {
+//     final url = Uri.parse("https://zeai-hrm-1.onrender.com/payslip/update-workdays");
+//     final response = await http.post(
+//       url,
+//       headers: {"Content-Type": "application/json"},
+//       body: jsonEncode({
+//         "employee_id": employeeId,
+//         "year": year,
+//         "month": month,
+//         "no_of_workdays": workdays,
+//       }),
+//     );
 
-    if (response.statusCode == 200) {
-      print("✅ Workdays updated in backend");
-    } else {
-      print("❌ Failed to update backend: ${response.body}");
-    }
-  } catch (e) {
-    print("❌ Error updating backend: $e");
-  }
-}
+//     if (response.statusCode == 200) {
+//       print("✅ Workdays updated in backend");
+//     } else {
+//       print("❌ Failed to update backend: ${response.body}");
+//     }
+//   } catch (e) {
+//     print("❌ Error updating backend: $e");
+//   }
+// }
 
 
   Future<void> _generatePdf() async {
