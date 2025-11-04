@@ -25,11 +25,13 @@ dependencies:
   cupertino_icons: ^1.0.8
   badges: ^3.1.2
   url_launcher: ^6.2.6
+  audioplayers: ^6.1.0
     
   
 dev_dependencies:
   flutter_test:
     sdk: flutter
+    
   flutter_lints: ^5.0.0
 
 flutter:
@@ -38,4 +40,5 @@ flutter:
   assets:
     - assets/
     - assets/event-png/
-    - assets/emp-directory/
+    - assets/emp-directory/ 
+    - assets/sounds/alert.mp3

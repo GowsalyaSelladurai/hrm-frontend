@@ -19,14 +19,8 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
   String selectedEmpId = "EMP ID";
   String selectedEmpName = "EMP NAME";
 
-  final Map<String, String> empMap = {
-    "ZeAI107": "Udaykiran",
-    "ZeAI108": "Hariprasad",
-    "ZeAI111": "Vishal",
-    "ZeAI116": "Gowsalya S",
-    "ZeAI124": "Manojkumar K",
-  };
-  late final Map<String, String> nameToIdMap;
+  Map<String, String> empMap = {}; // Will be fetched from API
+  late Map<String, String> nameToIdMap = {};
 
   final Map<String, Color> flagColors = {
     "Green Flag": Colors.green,
@@ -46,7 +40,10 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
   @override
   void initState() {
     super.initState();
-    nameToIdMap = {for (var e in empMap.entries) e.value: e.key};
+    // Fetch employees when the page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchDomainEmployees();
+    });
   }
 
   String getCurrentMonth() {
@@ -66,6 +63,30 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
     ][DateTime.now().month - 1];
   }
 
+  // Fetch employees based on the TL's domain
+  Future<void> _fetchDomainEmployees() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final domain = userProvider.domain;
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:5000/api/employees/domain/$domain'),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> employees = jsonDecode(response.body);
+        setState(() {
+          empMap = {
+            for (var e in employees) e['employeeId']: e['employeeName'],
+          };
+          nameToIdMap = {for (var e in empMap.entries) e.value: e.key};
+        });
+      }
+    } catch (e) {
+      print('Error fetching domain employees: $e');
+    }
+  }
+
   Future<void> submitReview() async {
     if (selectedEmpId == "EMP ID" ||
         selectedEmpName == "EMP NAME" ||
@@ -82,7 +103,7 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
       return;
     }
 
-    final url = Uri.parse('https://zeai-hrm-1.onrender.com/reviews');
+    final url = Uri.parse('http://localhost:5000/reviews');
     final reviewerName =
         Provider.of<UserProvider>(context, listen: false).employeeName ??
         'Admin';
@@ -114,41 +135,45 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
         );
 
         // 🔔 Create notifications
-      final notifUrl = Uri.parse("https://zeai-hrm-1.onrender.com/notifications");
-      String currentMonth = getCurrentMonth();
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-       final adminName = userProvider.employeeName ?? 'Admin';
+        final notifUrl = Uri.parse("http://localhost:5000/notifications");
+        String currentMonth = getCurrentMonth();
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final adminName = userProvider.employeeName ?? 'Admin';
 
-      // 1️⃣ Employee notification
-      final employeeNotif = {
-        "month": currentMonth,
-        "category": "performance",
-        // "message": "Performance review for $selectedEmpName ($selectedEmpId) - $currentMonth",
-        "message": "Performance received from ($adminName) - $currentMonth",
-        "empId": selectedEmpId,
-        "senderName": adminName,
-        "senderId": widget.currentUserId,
-        "flag": selectedFlag,
-      };
-      await http.post(notifUrl,
+        // 1️⃣ Employee notification
+        final employeeNotif = {
+          "month": currentMonth,
+          "category": "performance",
+          // "message": "Performance review for $selectedEmpName ($selectedEmpId) - $currentMonth",
+          "message": "Performance received from ($adminName) - $currentMonth",
+          "empId": selectedEmpId,
+          "senderName": adminName,
+          "senderId": widget.currentUserId,
+          "flag": selectedFlag,
+        };
+        await http.post(
+          notifUrl,
           headers: {"Content-Type": "application/json"},
-          body: jsonEncode(employeeNotif));
+          body: jsonEncode(employeeNotif),
+        );
 
-      // 2️⃣ Admin self-copy
-      final adminNotif = {
-        "month": currentMonth,
-        "category": "performance",
-        // "message": "You reviewed $selectedEmpName ($selectedEmpId) - $currentMonth",
-        "message": "Performance sent to ($selectedEmpName) - $currentMonth",
-        "empId": widget.currentUserId, // ✅ logged-in admin’s own ID
-        "senderName": adminName,
-        "senderId": widget.currentUserId,
-        "flag": selectedFlag,
-      };
-      await http.post(notifUrl,
+        // 2️⃣ Admin self-copy
+        final adminNotif = {
+          "month": currentMonth,
+          "category": "performance",
+          // "message": "You reviewed $selectedEmpName ($selectedEmpId) - $currentMonth",
+          "message": "Performance sent to ($selectedEmpName) - $currentMonth",
+          "empId": widget.currentUserId, // ✅ logged-in admin’s own ID
+          "senderName": adminName,
+          "senderId": widget.currentUserId,
+          "flag": selectedFlag,
+        };
+        await http.post(
+          notifUrl,
           headers: {"Content-Type": "application/json"},
-          body: jsonEncode(adminNotif));
-          
+          body: jsonEncode(adminNotif),
+        );
+
         // ✅ Reset form
         communicationController.clear();
         attitudeController.clear();
@@ -165,7 +190,8 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) =>  AdminNotificationsPage(empId: widget.currentUserId),
+              builder: (context) =>
+                  AdminNotificationsPage(empId: widget.currentUserId),
             ),
           );
         });
@@ -233,8 +259,9 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
                       (val) {
                         setState(() {
                           selectedEmpName = val!;
-                          selectedEmpId =
-                              val == "EMP NAME" ? "EMP ID" : nameToIdMap[val]!;
+                          selectedEmpId = val == "EMP NAME"
+                              ? "EMP ID"
+                              : nameToIdMap[val]!;
                         });
                       },
                       160,
@@ -267,29 +294,28 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
                         color: Colors.white,
                       ),
                       style: TextStyle(color: flagColors[selectedFlag]),
-                      items:
-                          flagColors.keys.map((String val) {
-                            return DropdownMenuItem(
-                              value: val,
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: BoxDecoration(
-                                      color: flagColors[val],
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    val,
-                                    style: TextStyle(color: flagColors[val]),
-                                  ),
-                                ],
+                      items: flagColors.keys.map((String val) {
+                        return DropdownMenuItem(
+                          value: val,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: flagColors[val],
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                            );
-                          }).toList(),
+                              const SizedBox(width: 6),
+                              Text(
+                                val,
+                                style: TextStyle(color: flagColors[val]),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                       onChanged: (val) {
                         setState(() {
                           selectedFlag = val!;
@@ -334,7 +360,7 @@ class _PerformanceReviewPageState extends State<PerformanceReviewPage> {
     );
   }
 
-Widget _buildActionButtons() {
+  Widget _buildActionButtons() {
     final reviewerName =
         Provider.of<UserProvider>(context, listen: false).employeeName ??
         'Admin';
@@ -362,7 +388,7 @@ Widget _buildActionButtons() {
         ),
       ],
     );
-  }  
+  }
 
   Widget reviewField(String label, TextEditingController controller) {
     return Padding(
@@ -416,18 +442,14 @@ Widget _buildActionButtons() {
           value: value,
           icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
           style: const TextStyle(color: Colors.white),
-          items:
-              items
-                  .map(
-                    (String val) => DropdownMenuItem(
-                      value: val,
-                      child: Text(
-                        val,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  )
-                  .toList(),
+          items: items
+              .map(
+                (String val) => DropdownMenuItem(
+                  value: val,
+                  child: Text(val, style: const TextStyle(color: Colors.white)),
+                ),
+              )
+              .toList(),
           onChanged: enabled ? onChanged : null,
         ),
       ),

@@ -21,12 +21,8 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
   String selectedEmpId = "EMP ID";
   String selectedEmpName = "EMP NAME";
 
-  final Map<String, String> empMap = {
-    "ZeAI102": "Nivetha S",
-    "ZeAI112": "Hemeswari D",
-    "ZeAI115": "Srivatsini R",
-  };
-  late final Map<String, String> nameToIdMap;
+  Map<String, String> empMap = {}; // Will be fetched from API
+  late Map<String, String> nameToIdMap = {};
 
   final Map<String, Color> flagColors = {
     "Green Flag": Colors.green,
@@ -46,7 +42,29 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
   @override
   void initState() {
     super.initState();
-    nameToIdMap = {for (var e in empMap.entries) e.value: e.key};
+    _fetchAllEmployees();
+  }
+
+  // ✅ Fetch all employees for the dropdown
+  Future<void> _fetchAllEmployees() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:5000/api/employees/for-review'),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> employees = jsonDecode(response.body);
+        setState(() {
+          empMap = {
+            for (var e in employees) e['employeeId']: e['employeeName'],
+          };
+          nameToIdMap = {for (var e in empMap.entries) e.value: e.key};
+        });
+      }
+    } catch (e) {
+      print('Error fetching all employees: $e');
+      // Handle error, maybe show a snackbar
+    }
   }
 
   String getCurrentMonth() {
@@ -82,7 +100,7 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
       return;
     }
 
-    final url = Uri.parse('https://zeai-hrm-1.onrender.com/reviews');
+    final url = Uri.parse('http://localhost:5000/reviews');
     final reviewerName =
         Provider.of<UserProvider>(context, listen: false).employeeName ??
         'Admin';
@@ -114,40 +132,44 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
         );
 
         // 🔔 Create notifications
-      final notifUrl = Uri.parse("https://zeai-hrm-1.onrender.com/notifications");
-      String currentMonth = getCurrentMonth();
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final adminName = userProvider.employeeName ?? 'Super Admin';
+        final notifUrl = Uri.parse("http://localhost:5000/notifications");
+        String currentMonth = getCurrentMonth();
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final adminName = userProvider.employeeName ?? 'Super Admin';
 
-      // 1️⃣ Employee notification
-      final employeeNotif = {
-        "month": currentMonth,
-        "category": "performance",
-        // "message": "Performance review for $selectedEmpName ($selectedEmpId) - $currentMonth",
-        "message": "Performance received from ($adminName) - $currentMonth",
-        "empId": selectedEmpId,
-        "senderName": adminName,
-        "senderId": widget.currentUserId,
-        "flag": selectedFlag,
-      };
-      await http.post(notifUrl,
+        // 1️⃣ Employee notification
+        final employeeNotif = {
+          "month": currentMonth,
+          "category": "performance",
+          // "message": "Performance review for $selectedEmpName ($selectedEmpId) - $currentMonth",
+          "message": "Performance received from ($adminName) - $currentMonth",
+          "empId": selectedEmpId,
+          "senderName": adminName,
+          "senderId": widget.currentUserId,
+          "flag": selectedFlag,
+        };
+        await http.post(
+          notifUrl,
           headers: {"Content-Type": "application/json"},
-          body: jsonEncode(employeeNotif));
+          body: jsonEncode(employeeNotif),
+        );
 
-      // 2️⃣ Admin self-copy
-      final adminNotif = {
-        "month": currentMonth,
-        "category": "performance",
-        // "message": "You reviewed $selectedEmpName ($selectedEmpId) - $currentMonth",
-        "message": "Performance sent to ($selectedEmpName) - $currentMonth",
-        "empId": widget.currentUserId, // ✅ logged-in admin’s own ID
-        "senderName": adminName,
-        "senderId": widget.currentUserId,
-        "flag": selectedFlag,
-      };
-      await http.post(notifUrl,
+        // 2️⃣ Admin self-copy
+        final adminNotif = {
+          "month": currentMonth,
+          "category": "performance",
+          // "message": "You reviewed $selectedEmpName ($selectedEmpId) - $currentMonth",
+          "message": "Performance sent to ($selectedEmpName) - $currentMonth",
+          "empId": widget.currentUserId, // ✅ logged-in admin’s own ID
+          "senderName": adminName,
+          "senderId": widget.currentUserId,
+          "flag": selectedFlag,
+        };
+        await http.post(
+          notifUrl,
           headers: {"Content-Type": "application/json"},
-          body: jsonEncode(adminNotif));
+          body: jsonEncode(adminNotif),
+        );
 
         // ✅ Reset form
         communicationController.clear();
@@ -165,7 +187,8 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => AdminNotificationsPage(empId: widget.currentUserId),
+              builder: (context) =>
+                  AdminNotificationsPage(empId: widget.currentUserId),
             ),
           );
         });
@@ -233,8 +256,9 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
                       (val) {
                         setState(() {
                           selectedEmpName = val!;
-                          selectedEmpId =
-                              val == "EMP NAME" ? "EMP ID" : nameToIdMap[val]!;
+                          selectedEmpId = val == "EMP NAME"
+                              ? "EMP ID"
+                              : nameToIdMap[val]!;
                         });
                       },
                       160,
@@ -267,29 +291,28 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
                         color: Colors.white,
                       ),
                       style: TextStyle(color: flagColors[selectedFlag]),
-                      items:
-                          flagColors.keys.map((String val) {
-                            return DropdownMenuItem(
-                              value: val,
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: BoxDecoration(
-                                      color: flagColors[val],
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    val,
-                                    style: TextStyle(color: flagColors[val]),
-                                  ),
-                                ],
+                      items: flagColors.keys.map((String val) {
+                        return DropdownMenuItem(
+                          value: val,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: flagColors[val],
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                            );
-                          }).toList(),
+                              const SizedBox(width: 6),
+                              Text(
+                                val,
+                                style: TextStyle(color: flagColors[val]),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                       onChanged: (val) {
                         setState(() {
                           selectedFlag = val!;
@@ -364,7 +387,6 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
     );
   }
 
-
   Widget reviewField(String label, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -417,18 +439,14 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
           value: value,
           icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
           style: const TextStyle(color: Colors.white),
-          items:
-              items
-                  .map(
-                    (String val) => DropdownMenuItem(
-                      value: val,
-                      child: Text(
-                        val,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  )
-                  .toList(),
+          items: items
+              .map(
+                (String val) => DropdownMenuItem(
+                  value: val,
+                  child: Text(val, style: const TextStyle(color: Colors.white)),
+                ),
+              )
+              .toList(),
           onChanged: enabled ? onChanged : null,
         ),
       ),

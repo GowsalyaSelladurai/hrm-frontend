@@ -50,11 +50,11 @@ class _EmpPayrollState extends State<EmpPayroll> {
     return true; // ✅ all valid months are checked
   }
 
-  int getDaysInMonth(int year, int month) {
-  final beginningNextMonth =
-      (month < 12) ? DateTime(year, month + 1, 1) : DateTime(year + 1, 1, 1);
-  return beginningNextMonth.subtract(const Duration(days: 1)).day;
-}
+//   int getDaysInMonth(int year, int month) {
+//   final beginningNextMonth =
+//       (month < 12) ? DateTime(year, month + 1, 1) : DateTime(year + 1, 1, 1);
+//   return beginningNextMonth.subtract(const Duration(days: 1)).day;
+// }
 
   static const List<String> months = [
     'January',
@@ -85,6 +85,38 @@ class _EmpPayrollState extends State<EmpPayroll> {
     'nov',
     'dec',
   ];
+Future<int> fetchWorkingDays(String employeeId, int month, int year) async {
+  try {
+    final response = await http.get(
+      Uri.parse("http://localhost:5000/attendance/attendance/history/$employeeId"),
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = jsonDecode(response.body);
+
+      // ✅ Count only valid login days for the given month/year
+      final workdays = data.where((item) {
+        if (item['date'] != null &&
+            item['loginTime'] != null &&
+            item['loginTime'].toString().isNotEmpty) {
+          final dateParts = item['date'].split('-'); // dd-MM-yyyy
+          int m = int.parse(dateParts[1]);
+          int y = int.parse(dateParts[2]);
+          return m == month && y == year;
+        }
+        return false;
+      }).length;
+
+      return workdays;
+    } else {
+      print("❌ Attendance fetch failed: ${response.statusCode}");
+      return 0;
+    }
+  } catch (e) {
+    print("❌ Attendance error: $e");
+    return 0;
+  }
+}
 
   Future<void> _downloadAllCheckedPayslips() async {
     final employeeId =
@@ -108,7 +140,7 @@ class _EmpPayrollState extends State<EmpPayroll> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://zeai-hrm-1.onrender.com/get-multiple-payslips'),
+        Uri.parse('http://localhost:5000/get-multiple-payslips'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'year': selectedYear,
@@ -128,6 +160,14 @@ class _EmpPayrollState extends State<EmpPayroll> {
 
         for (final monthKey in selectedMonths) {
           final monthIndex = monthKeys.indexOf(monthKey);
+          final monthName = months[monthIndex];
+
+        // ✅ Fetch attendance-based working days
+        int attendanceWorkdays = await fetchWorkingDays(
+          employeeId,
+          monthIndex + 1,
+          int.parse(selectedYear!),
+        );
           final earnings = Map<String, dynamic>.from(
               data['months'][monthKey]['earnings']);
           final deductions = Map<String, dynamic>.from(
@@ -178,7 +218,7 @@ class _EmpPayrollState extends State<EmpPayroll> {
                   // Payslip Title
                   pw.Center(
                     child: pw.Text(
-                      'Payslip for ${months[monthIndex]} $selectedYear',
+                      'Payslip for $monthName $selectedYear',
                       style: pw.TextStyle(
                           fontSize: 20, fontWeight: pw.FontWeight.bold),
                     ),
@@ -204,10 +244,10 @@ class _EmpPayrollState extends State<EmpPayroll> {
                       _detailRow('Location', employee['location'], 'UAN',
                           employee['uan']),
                       _detailRow(
-                            'No.Of Days Worked',
-                            getDaysInMonth(int.parse(selectedYear!), monthIndex + 1).toString(),
-                            'ESIC No',
-                            employee['esic_no'],
+  'No.Of Days Worked',
+  attendanceWorkdays.toString(),
+  'ESIC No',
+  employee['esic_no'],
 ),
                       _detailRow('PAN', employee['pan'], 'LOP',
                           employee['lop']),
@@ -226,10 +266,10 @@ class _EmpPayrollState extends State<EmpPayroll> {
                         decoration: pw.BoxDecoration(
                             color: PdfColor.fromHex('#9F71F8')),
                         children: [
-                                _cell('Earnings', isHeader: true),
-                                _cell('Amount (Rs)', isHeader: true),
-                                _cell('Deductions', isHeader: true),
-                                _cell('Amount (Rs)', isHeader: true),
+  _cell('Earnings', isBold: true),
+  _cell('Amount (Rs)', isBold: true),
+  _cell('Deductions', isBold: true),
+  _cell('Amount (Rs)', isBold: true),
 ],
                       ),
                       ...List.generate(
@@ -588,39 +628,13 @@ class _EmpPayrollState extends State<EmpPayroll> {
 pw.TableRow _detailRow(String k1, String? v1, String k2, String? v2) {
   return pw.TableRow(
     children: [
-      _labelValueCell(k1, v1),
-      _labelValueCell(k2, v2),
+      _cell('$k1: ${v1 ?? ''}'),
+      _cell('$k2: ${v2 ?? ''}'),
     ],
   );
 }
 
-pw.Widget _labelValueCell(String label, String? value) {
-  return pw.Padding(
-    padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-    child: pw.RichText(
-      text: pw.TextSpan(
-        children: [
-          pw.TextSpan(
-            text: "$label: ",
-            style: pw.TextStyle(
-              fontWeight: pw.FontWeight.bold, // ✅ Bold for label
-              fontSize: 12,
-            ),
-          ),
-          pw.TextSpan(
-            text: value ?? '',
-            style: pw.TextStyle(
-              fontWeight: pw.FontWeight.normal, // ✅ Normal for value
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-pw.Widget _cell(String text, {bool isHeader = false}) {
+pw.Widget _cell(String text, {bool isBold = false}) {
   return pw.Padding(
     padding: const pw.EdgeInsets.symmetric(
       vertical: 7,
@@ -629,8 +643,8 @@ pw.Widget _cell(String text, {bool isHeader = false}) {
     child: pw.Text(
       text,
       style: pw.TextStyle(
-        fontSize: isHeader ? 14 : 12, // bigger font for header
-        fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+        fontSize: 14,
+        fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
       ),
     ),
   );

@@ -66,13 +66,6 @@ class _PayslipScreenState extends State<PayslipScreen> {
     Future.delayed(Duration.zero, _fetchPayslipDetails);
   }
 
-  int getDaysInMonth(int year, int month) {
-  final beginningNextMonth =
-      (month < 12) ? DateTime(year, month + 1, 1) : DateTime(year + 1, 1, 1);
-  return beginningNextMonth.subtract(const Duration(days: 1)).day;
-}
-
-
   Future<void> fetchWorkingDaysForPayslip() async {
     final employeeId = Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
     final now = DateTime.now();
@@ -83,7 +76,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
   }
 
   Future<int> fetchWorkingDays(String employeeId, int month, int year) async {
-    var url = Uri.parse("https://zeai-hrm-1.onrender.com/attendance/attendance/history/$employeeId");
+    var url = Uri.parse("http://localhost:5000/attendance/attendance/history/$employeeId");
     var response = await http.get(url);
 
     if (response.statusCode == 200) {
@@ -120,7 +113,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
     }
 
     final url = Uri.parse(
-      'https://zeai-hrm-1.onrender.com/get-payslip-details?employee_id=$employeeId&year=$selectedYear&month=$selectedMonth',
+      'http://localhost:5000/get-payslip-details?employee_id=$employeeId&year=$selectedYear&month=$selectedMonth',
     );
 
     try {
@@ -139,14 +132,14 @@ class _PayslipScreenState extends State<PayslipScreen> {
           }
         }
         // 👇 If backend didn't send workdays, calculate from attendance
-      int noOfWorkdays = int.tryParse(data['no_of_workdays']?.toString() ?? '0') ?? 0;
-      if (noOfWorkdays == 0) {
+      // int noOfWorkdays = int.tryParse(data['no_of_workdays']?.toString() ?? '0') ?? 0;
+      // if (noOfWorkdays == 0) {
         final monthIndex = _months.indexOf(selectedMonth) + 1;
-        noOfWorkdays = await fetchWorkingDays(employeeId, monthIndex, int.parse(selectedYear));
+        int noOfWorkdays = await fetchWorkingDays(employeeId, monthIndex, int.parse(selectedYear));
 
         // Optionally update backend payslip with correct workdays
         await _updateWorkdaysInBackend(employeeId, selectedYear, selectedMonth, noOfWorkdays);
-      }
+      // }
 
         setState(() {
           earnings = data['earnings'] ?? {};
@@ -157,10 +150,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
             'designation': (data['designation'] ?? '').toString(),
             'location': (data['location'] ?? '').toString(),
             // 'no_of_workdays': (data['no_of_workdays'] ?? '').toString(),
-            'no_of_workdays':  getDaysInMonth(
-                                int.parse(selectedYear),
-                                _months.indexOf(selectedMonth) + 1,
-                              ).toString(),
+            'no_of_workdays': noOfWorkdays.toString(),
             'date_of_joining': formattedDate,
             'bank_name': (data['bank_name'] ?? '').toString(),
             'account_no': (data['account_no'] ?? '').toString(),
@@ -180,7 +170,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
   Future<void> _updateWorkdaysInBackend(
     String employeeId, String year, String month, int workdays) async {
   try {
-    final url = Uri.parse("https://zeai-hrm-1.onrender.com/payslip/update-workdays");
+    final url = Uri.parse("http://localhost:5000/payslip/update-workdays");
     final response = await http.post(
       url,
       headers: {"Content-Type": "application/json"},
@@ -269,7 +259,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   pw.SizedBox(height: 10),
                   pw.Table(
                     border:
-                        pw.TableBorder.all(width: 2, color: PdfColors.grey),
+                        pw.TableBorder.all(width: 1, color: PdfColors.grey),
                     children: [
                       _detailRow('Employee Name', employeeData['employee_name'],
                           'Employee ID', employeeData['employee_id']),
@@ -294,17 +284,17 @@ class _PayslipScreenState extends State<PayslipScreen> {
                   // Earnings + Deductions
                   pw.Table(
                     border:
-                        pw.TableBorder.all(width: 2, color: PdfColors.grey),
+                        pw.TableBorder.all(width: 1, color: PdfColors.grey),
                     children: [
                       pw.TableRow(
                         decoration: pw.BoxDecoration(
                             color: PdfColor.fromHex('#9F71F8')),
-                        children: [
-                          _cell('Earnings', isHeader: true),
-                          _cell('Amount (Rs)', isHeader: true),
-                          _cell('Deductions', isHeader: true),
-                          _cell('Amount (Rs)', isHeader: true),
-                        ],
+                       children: [
+  _cell('Earnings', isBold: true),
+  _cell('Amount (Rs)', isBold: true),
+  _cell('Deductions', isBold: true),
+  _cell('Amount (Rs)', isBold: true),
+],
                       ),
                       ...List.generate(
                         (earnings.length > deductions.length
@@ -756,39 +746,13 @@ class _PayslipScreenState extends State<PayslipScreen> {
 pw.TableRow _detailRow(String k1, String? v1, String k2, String? v2) {
   return pw.TableRow(
     children: [
-      _labelValueCell(k1, v1),
-      _labelValueCell(k2, v2),
+      _cell('$k1: ${v1 ?? ''}'),
+      _cell('$k2: ${v2 ?? ''}'),
     ],
   );
 }
 
-pw.Widget _labelValueCell(String label, String? value) {
-  return pw.Padding(
-    padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-    child: pw.RichText(
-      text: pw.TextSpan(
-        children: [
-          pw.TextSpan(
-            text: "$label: ",
-            style: pw.TextStyle(
-              fontWeight: pw.FontWeight.bold, // ✅ Bold for label
-              fontSize: 12,
-            ),
-          ),
-          pw.TextSpan(
-            text: value ?? '',
-            style: pw.TextStyle(
-              fontWeight: pw.FontWeight.normal, // ✅ Normal for value
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-pw.Widget _cell(String text, {bool isHeader = false}) {
+pw.Widget _cell(String text, {bool isBold = false}) {
   return pw.Padding(
     padding: const pw.EdgeInsets.symmetric(
       vertical: 7,
@@ -797,10 +761,9 @@ pw.Widget _cell(String text, {bool isHeader = false}) {
     child: pw.Text(
       text,
       style: pw.TextStyle(
-        fontSize: isHeader ? 14 : 12, // bigger font for header
-        fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
+        fontSize: 14,
+        fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
       ),
     ),
   );
 }
-

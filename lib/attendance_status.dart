@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:audioplayers/audioplayers.dart';
 import 'sidebar.dart';
 import 'employee_dashboard.dart';
 import 'package:provider/provider.dart';
 import 'user_provider.dart';
+
 
 class AttendanceScreen extends StatefulWidget {
   const AttendanceScreen({super.key}); // ✅ self-sufficient (no action)
@@ -37,12 +39,15 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   final logoutReasonController = TextEditingController();
    
   Timer? breakTimer;
+  
+
 
   @override
   void initState() {
     super.initState();
     fetchLatestStatus();
     fetchAttendanceHistory();
+    startTotalBreakMonitor(); // ✅ Start background total break monitor
   }
    @override
   void dispose() {
@@ -60,9 +65,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return DateFormat('dd-MM-yyyy').format(DateTime.now());
   }
 
-  Future<void> fetchLatestStatus() async {
+ Future<void> fetchLatestStatus() async {
   final employeeId = Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
-  var url = Uri.parse('https://zeai-hrm-1.onrender.com/attendance/attendance/status/$employeeId');
+  var url = Uri.parse('http://localhost:5000/attendance/attendance/status/$employeeId');
 
   try {
     var response = await http.get(url);
@@ -70,12 +75,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       final data = jsonDecode(response.body);
       final todayDate = getCurrentDate();
 
+      // ✅ If record not for today, reset everything
       if (data['date'] != todayDate) {
         setState(() {
           isBreakActive = false;
           isLoginDisabled = false;
           isLogoutDisabled = true;
+          loginTime = "";
+          logoutTime = "";
+          loginReason = "";
+          logoutReason = "";
+          breakStart = "";
         });
+        breakTimer?.cancel();
         return;
       }
 
@@ -84,41 +96,131 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         logoutTime = data['logoutTime'] ?? "";
         loginReason = data['loginReason'] ?? "";
         logoutReason = data['logoutReason'] ?? "";
+
+        // ✅ Update reason controllers
         loginReasonController.text = loginReason;
         logoutReasonController.text = logoutReason;
-        // ✅ Lock fields if reasons already exist
-         isLoginReasonSubmitted = loginReason.isNotEmpty && loginReason != "-";
-         isLogoutReasonSubmitted = logoutReason.isNotEmpty && logoutReason != "-";
 
+        // ✅ Lock reason fields if already filled
+        isLoginReasonSubmitted = loginReason.isNotEmpty && loginReason != "-";
+        isLogoutReasonSubmitted = logoutReason.isNotEmpty && logoutReason != "-";
 
-
-        // ✅ Restore break state after refresh
-        if (data['breakInProgress'] != null && data['status'] == "Break") {
-          isBreakActive = true;
-          breakStart = data['breakInProgress'];
-        } else {
-          isBreakActive = false;
-          breakStart = "";
-        }
-
-        // ✅ Disable/enable buttons correctly
+        // ✅ Update break and login/logout button states
         isLoginDisabled = data['status'] == "Login" || data['status'] == "Break";
         isLogoutDisabled = data['status'] == "Logout" || data['status'] == "None";
       });
+
+      // ✅ Restore and handle break state properly
+      if (data['breakInProgress'] != null && data['status'] == "Break") {
+        // Break is active — start timer using backend time
+        setState(() {
+          isBreakActive = true;
+          breakStart = data['breakInProgress'];
+        });
+        startBreakAutoCheckTimer(breakStart); // 👈 pass backend break start time
+      } else {
+        // No active break — cancel any running timers
+        setState(() {
+          isBreakActive = false;
+          breakStart = "";
+        });
+        breakTimer?.cancel(); // ensure no leftover timer
+      }
     }
   } catch (e) {
     print('❌ Error fetching status: $e');
   }
 }
+// ✅ Background periodic total break monitor (auto-alert)
+void startTotalBreakMonitor() {
+  Timer.periodic(const Duration(minutes: 1), (timer) async {
+    if (!mounted) {
+      timer.cancel();
+      return;
+    }
 
+    try {
+      final employeeId =
+          Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
+      final url = Uri.parse(
+          'http://localhost:5000/attendance/attendance/status/$employeeId');
+      final response = await http.get(url);
 
+      if (response.statusCode != 200) return;
+      final data = jsonDecode(response.body);
+
+      final breakTime = data['breakTime'] ?? '-';
+      int totalMinutes = 0;
+
+      // Extract total minutes if present
+      final match = RegExp(r'\(Total:\s*(\d+)\s*mins\)').firstMatch(breakTime);
+      if (match != null) totalMinutes = int.parse(match.group(1)!);
+
+      // 🔔 Alert when total reaches 55–59 min (only once)
+      if (totalMinutes >= 55 && totalMinutes < 60) {
+        timer.cancel();
+        final player = AudioPlayer();
+        await player.play(AssetSource('sounds/alert.mp3'));
+
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text("⚠ Break Time Alert"),
+              content: Text(
+                "Your total break time has reached $totalMinutes minutes.\n"
+                "Only ${60 - totalMinutes} minutes remaining before reaching the limit.",
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("OK")),
+              ],
+            ),
+          );
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("⚠ Break total: $totalMinutes mins (limit 60 mins)"),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+
+      // 🚫 Hard stop at 60 min
+      if (totalMinutes >= 60) {
+        timer.cancel();
+        final player = AudioPlayer();
+        await player.play(AssetSource('sounds/alert.mp3'));
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text("⏰ Break Limit Reached"),
+              content: const Text(
+                  "You have reached your total 60-minute break limit."),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("OK")),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ Error in total break monitor: $e');
+    }
+  });
+}
 
   // ✅ POST: Save new login
   Future<void> postAttendanceData() async {
     final employeeId =
         Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
     var url =
-        Uri.parse('https://zeai-hrm-1.onrender.com/attendance/attendance/mark/$employeeId');
+        Uri.parse('http://localhost:5000/attendance/attendance/mark/$employeeId');
 
     var body = {
       'date': getCurrentDate(),
@@ -151,7 +253,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final employeeId =
         Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
     var url = Uri.parse(
-        'https://zeai-hrm-1.onrender.com/attendance/attendance/update/$employeeId');
+        'http://localhost:5000/attendance/attendance/update/$employeeId');
 
     var body = {
       'date': getCurrentDate(),
@@ -187,7 +289,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       final employeeId =
           Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
       var url = Uri.parse(
-          'https://zeai-hrm-1.onrender.com/attendance/attendance/history/$employeeId');
+          'http://localhost:5000/attendance/attendance/history/$employeeId');
       var response = await http.get(url);
 
       if (response.statusCode == 200) {
@@ -390,7 +492,7 @@ Future<bool> showLoginReasonDialog() async {
       });
 
       try {
-        var url = Uri.parse('https://zeai-hrm-1.onrender.com/attendance/attendance/update/$employeeId');
+        var url = Uri.parse('http://localhost:5000/attendance/attendance/update/$employeeId');
         var body = jsonEncode({
           'date': getCurrentDate(),
           'breakTime': breakStart,
@@ -435,7 +537,7 @@ Future<bool> showLoginReasonDialog() async {
     });
 
     try {
-      var url = Uri.parse('https://zeai-hrm-1.onrender.com/attendance/attendance/update/$employeeId');
+      var url = Uri.parse('http://localhost:5000/attendance/attendance/update/$employeeId');
       var body = jsonEncode({
         'date': getCurrentDate(),
         'breakTime': breakEnd,
@@ -468,44 +570,99 @@ Future<bool> showLoginReasonDialog() async {
       print('❌ Error ending break: $e');
     }
   }
+//alert msg
+void startBreakAutoCheckTimer([String? backendBreakStart]) {
+  breakTimer?.cancel();
+  bool warningShown = false;
+  final player = AudioPlayer();
 
-  // ✅ Auto Break Limit Timer
-  void startBreakAutoCheckTimer() {
-    breakTimer?.cancel();
-    breakTimer = Timer.periodic(const Duration(minutes: 1), (timer) async {
-      if (!isBreakActive) {
-        timer.cancel();
-        return;
-      }
-
-      final employeeId = Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
-      final url = Uri.parse('https://zeai-hrm-1.onrender.com/attendance/attendance/status/$employeeId');
-      final response = await http.get(url);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final breakTime = data['breakTime'] ?? "";
-        if (breakTime.contains("(Total:")) {
-          final match = RegExp(r'\(Total:\s*(\d+)\s*mins\)').firstMatch(breakTime);
-          if (match != null) {
-            final totalMinutes = int.tryParse(match.group(1) ?? "0") ?? 0;
-            if (totalMinutes >= 60) {
-              breakTimer?.cancel();
-              await endBreak(employeeId, getCurrentTime());
-              showDialog(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: const Text("Break Limit Reached"),
-                  content: const Text("⚠ You have reached your 60-minute break limit."),
-                  actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK"))],
-                ),
-              );
-            }
-          }
-        }
-      }
-    });
+  // Use backend start time if provided, else use current time
+  DateTime breakStartTime;
+  if (backendBreakStart != null && backendBreakStart.isNotEmpty) {
+    try {
+      breakStartTime = DateFormat('hh:mm:ss a').parse(backendBreakStart);
+      // Attach today’s date to parsed time
+      final now = DateTime.now();
+      breakStartTime = DateTime(now.year, now.month, now.day,
+          breakStartTime.hour, breakStartTime.minute, breakStartTime.second);
+    } catch (e) {
+      breakStartTime = DateTime.now();
+    }
+  } else {
+    breakStartTime = DateTime.now();
   }
+
+  // Run timer every 1 minute
+  breakTimer = Timer.periodic(const Duration(minutes: 1), (timer) async {
+    if (!isBreakActive) {
+      timer.cancel();
+      return;
+    }
+
+    final now = DateTime.now();
+    final elapsedMinutes = now.difference(breakStartTime).inMinutes;
+
+    // Trigger warning only once when 55 min reached
+    if (elapsedMinutes >= 55 && elapsedMinutes < 60 && !warningShown) {
+      warningShown = true;
+
+      await player.play(AssetSource('sounds/alert.mp3')); // play 5-sec sound
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("⚠ Break Time Alert"),
+            content: const Text(
+              "You have reached 55 minutes of break time.\n"
+              "Only 5 minutes remaining before reaching the 60-minute limit.",
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("OK")),
+            ],
+          ),
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("⚠ 5 minutes remaining before break limit!"),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    }
+
+    // Auto-end break at 60 min
+    if (elapsedMinutes >= 60) {
+      breakTimer?.cancel();
+      final employeeId =
+          Provider.of<UserProvider>(context, listen: false).employeeId ?? '';
+      await endBreak(employeeId, getCurrentTime());
+      await player.play(AssetSource('sounds/alert.mp3')); // play sound again
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Break Limit Reached"),
+            content: const Text(
+                "⚠ You have reached your total 60-minute break limit."),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("OK")),
+            ],
+          ),
+        );
+      }
+    }
+  });
+}
+
+
+
 
  void handleLogout() async {
   if (logoutTime.isNotEmpty) {

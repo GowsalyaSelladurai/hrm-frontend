@@ -28,7 +28,10 @@ class LoginPage extends StatefulWidget {
 
 // ✅ Save login session function
 Future<void> saveLoginSession(
-    String employeeId, String employeeName, String position) async {
+  String employeeId,
+  String employeeName,
+  String position,
+) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString('employeeId', employeeId);
   await prefs.setString('employeeName', employeeName);
@@ -68,7 +71,9 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://zeai-hrm-1.onrender.com/api/employee-login'),//change youur render url here!
+        Uri.parse(
+          'http://localhost:5000/api/employee-login',
+        ), //change youur render url here!
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'employeeId': employeeIdController.text.trim(),
@@ -89,31 +94,35 @@ class _LoginPageState extends State<LoginPage> {
         );
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          final userProvider =
-              Provider.of<UserProvider>(context, listen: false);
+          final userProvider = Provider.of<UserProvider>(
+            context,
+            listen: false,
+          );
           userProvider.setEmployeeId(employeeIdController.text.trim());
           userProvider.setEmployeeName(employeeNameController.text.trim());
           userProvider.setPosition(positionController.text.trim());
 
           // ✅ Navigate after provider is updated
-          if (position == "Admin") {
+          if (position == "TL") {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                  builder: (context) => const admin.AdminDashboard()),
+                builder: (context) => const admin.AdminDashboard(),
+              ),
             );
-          } else if (position == "Founder"||position == "HR") {
+          } else if (position == "Founder" || position == "HR") {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                  builder: (context) =>
-                      const superadmin.SuperAdminDashboard()),
+                builder: (context) => const superadmin.SuperAdminDashboard(),
+              ),
             );
           } else {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                  builder: (context) => const employee.EmployeeDashboard()),
+                builder: (context) => const employee.EmployeeDashboard(),
+              ),
             );
           }
         });
@@ -122,8 +131,9 @@ class _LoginPageState extends State<LoginPage> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text("Invalid Credentials ❌"),
-            content:
-                const Text("Please check your Employee ID, Name, or Position."),
+            content: const Text(
+              "Please check your Employee ID, Name, or Position.",
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -196,21 +206,23 @@ class _LoginPageState extends State<LoginPage> {
                   children: const [
                     SizedBox(width: 16),
                     //FaIcon(FontAwesomeIcons.chevronLeft,
-                        //color: Colors.white, size: 30),
+                    //color: Colors.white, size: 30),
                     //SizedBox(width: 16),
                     //FaIcon(FontAwesomeIcons.chevronRight,
-                        //color: Colors.white, size: 30),
+                    //color: Colors.white, size: 30),
                     //SizedBox(width: 18),
                     Image(
-                        image: AssetImage('assets/logo_z.png'),
-                        width: 100,
-                        height: 50),
+                      image: AssetImage('assets/logo_z.png'),
+                      width: 100,
+                      height: 50,
+                    ),
                     //SizedBox(width:70),
                     Spacer(),
                     Image(
-                        image: AssetImage('assets/logo_zeai.png'),
-                        width: 140,
-                        height: 140),
+                      image: AssetImage('assets/logo_zeai.png'),
+                      width: 140,
+                      height: 140,
+                    ),
                     SizedBox(width: 700),
                   ],
                 ),
@@ -257,25 +269,36 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                               const SizedBox(height: 24),
-                              buildTextFieldRow("Employee ID :",
-                                  "Enter_id", employeeIdController),
+                              buildTextFieldRow(
+                                "Employee ID :",
+                                "Enter_id",
+                                employeeIdController,
+                              ),
                               const SizedBox(height: 16),
-                              buildTextFieldRow("Employee Name :",
-                                  "Enter_Name", employeeNameController),
+                              buildTextFieldRow(
+                                "Employee Name :",
+                                "Enter_Name",
+                                employeeNameController,
+                              ),
                               const SizedBox(height: 16),
-                              buildTextFieldRow("Position :",
-                                  "Enter_position", positionController),
+                              buildTextFieldRow(
+                                "Position :",
+                                "Enter_position",
+                                positionController,
+                              ),
                               const SizedBox(height: 30),
 
                               SizedBox(
                                 width: 100,
                                 child: ElevatedButton(
-                                  onPressed:
-                                      isLoading ? null : sendLoginDetails,
+                                  onPressed: isLoading
+                                      ? null
+                                      : sendLoginDetails,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF171A30),
                                     padding: const EdgeInsets.symmetric(
-                                        vertical: 20),
+                                      vertical: 20,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -292,8 +315,9 @@ class _LoginPageState extends State<LoginPage> {
                                       : const Text(
                                           'Login',
                                           style: TextStyle(
-                                              fontSize: 16,
-                                              color: Colors.white),
+                                            fontSize: 16,
+                                            color: Colors.white,
+                                          ),
                                         ),
                                 ),
                               ),
@@ -313,7 +337,10 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget buildTextFieldRow(
-      String label, String hint, TextEditingController controller) {
+    String label,
+    String hint,
+    TextEditingController controller,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [

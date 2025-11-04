@@ -1,4 +1,4 @@
-//admin_dashboard.dart 
+//admin_dashboard.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -17,7 +17,6 @@ import 'event_banner_slider.dart';
 import 'leave_approval.dart';
 import 'adminperformance.dart'; // ✅ for Performance Review
 import 'package:intl/intl.dart';
-
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -44,7 +43,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void initState() {
     super.initState();
     fetchEmployeeName();
-    fetchPendingCount("admin"); // ✅ fetch badge count on load
+    _refreshPendingCount(); // ✅ fetch badge count on load
   }
 
   @override
@@ -53,15 +52,26 @@ class _AdminDashboardState extends State<AdminDashboard> {
     _fetchLeaveBalance(); // refresh balances when dashboard is revisited
   }
 
+  // ✅ Helper to get employeeId and refresh count
+  void _refreshPendingCount() {
+    final employeeId = Provider.of<UserProvider>(
+      context,
+      listen: false,
+    ).employeeId;
+    if (employeeId != null) fetchPendingCount("tl", employeeId);
+  }
+
   Future<void> fetchEmployeeName() async {
-    final employeeId =
-        Provider.of<UserProvider>(context, listen: false).employeeId;
+    final employeeId = Provider.of<UserProvider>(
+      context,
+      listen: false,
+    ).employeeId;
 
     if (employeeId == null) return;
 
     try {
       final response = await http.get(
-        Uri.parse("https://zeai-hrm-1.onrender.com/get-employee-name/$employeeId"),
+        Uri.parse("http://localhost:5000/get-employee-name/$employeeId"),
       );
 
       if (response.statusCode == 200) {
@@ -80,8 +90,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
   /// 🔹 Fetch leave balances
   Future<void> _fetchLeaveBalance() async {
     try {
-      final employeeId =
-          Provider.of<UserProvider>(context, listen: false).employeeId?.trim();
+      final employeeId = Provider.of<UserProvider>(
+        context,
+        listen: false,
+      ).employeeId?.trim();
 
       if (employeeId == null || employeeId.isEmpty) {
         setState(() {
@@ -93,7 +105,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       final year = DateTime.now().year;
       final url =
-          "https://zeai-hrm-1.onrender.com/apply/leave-balance/$employeeId?year=$year";
+          "http://localhost:5000/apply/leave-balance/$employeeId?year=$year";
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -126,10 +138,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   /// ✅ Fetch pending leave requests count for admin
-  Future<void> fetchPendingCount(String userRole) async {
+  Future<void> fetchPendingCount(String userRole, String employeeId) async {
     try {
       final response = await http.get(
-        Uri.parse("https://zeai-hrm-1.onrender.com/apply/pending-count?approver=$userRole"),
+        Uri.parse(
+          // Pass both role and ID to the backend
+          "http://localhost:5000/apply/pending-count?approver=$userRole&approverId=$employeeId",
+        ),
       );
 
       if (response.statusCode == 200) {
@@ -144,11 +159,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
       print("❌ Error fetching pending count: $e");
     }
   }
-/// Delete employee comment
+
+  /// Delete employee comment
   Future<void> _deleteEmployeeComment(String id) async {
     try {
       final response = await http.delete(
-        Uri.parse("https://zeai-hrm-1.onrender.com/review-decision/$id"),
+        Uri.parse("http://localhost:5000/review-decision/$id"),
       );
 
       if (response.statusCode == 200) {
@@ -159,110 +175,120 @@ class _AdminDashboardState extends State<AdminDashboard> {
         await _showEmployeeComments(); // refresh dialog
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Failed to delete (${response.statusCode})")),
+          SnackBar(
+            content: Text("❌ Failed to delete (${response.statusCode})"),
+          ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Error: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("❌ Error: $e")));
     }
   }
+
   Future<void> _showEmployeeComments() async {
-  try {
-    final response = await http.get(
-      Uri.parse("https://zeai-hrm-1.onrender.com/review-decision/feedback?positions=employee,intern"),
-      headers: {"Accept": "application/json"},
-    );
+    try {
+      final response = await http.get(
+        Uri.parse(
+          "http://localhost:5000/review-decision/feedback?positions=employee,intern",
+        ),
+        headers: {"Accept": "application/json"},
+      );
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
 
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text(
-            "Employee Feedback",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: data.isEmpty
-                ? const Text("No employee feedback available yet.")
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: data.length,
-                    itemBuilder: (context, index) {
-                      final item = data[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        child: ListTile(
-                          leading: Icon(
-                            item["decision"] == "agree"
-                                ? Icons.thumb_up
-                                : Icons.thumb_down,
-                            color: item["decision"] == "agree"
-                                ? Colors.green
-                                : Colors.red,
-                          ),
-                          title: Text(
-                            item["employeeName"] ?? "Unknown",
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(item["position"] ?? ""),
-                              const SizedBox(height: 4),
-                              Text(
-                                item["comment"] ?? "",
-                                style: const TextStyle(
-                                    fontStyle: FontStyle.italic),
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text(
+              "Employee Feedback",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: data.isEmpty
+                  ? const Text("No employee feedback available yet.")
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: data.length,
+                      itemBuilder: (context, index) {
+                        final item = data[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          child: ListTile(
+                            leading: Icon(
+                              item["decision"] == "agree"
+                                  ? Icons.thumb_up
+                                  : Icons.thumb_down,
+                              color: item["decision"] == "agree"
+                                  ? Colors.green
+                                  : Colors.red,
+                            ),
+                            title: Text(
+                              item["employeeName"] ?? "Unknown",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Submitted: ${_formatDate(item["createdAt"])}",
-                                style: const TextStyle(
-                                    fontSize: 12, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                          isThreeLine: true,
-                          trailing: IconButton(
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(item["position"] ?? ""),
+                                const SizedBox(height: 4),
+                                Text(
+                                  item["comment"] ?? "",
+                                  style: const TextStyle(
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Submitted: ${_formatDate(item["createdAt"])}",
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            isThreeLine: true,
+                            trailing: IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               tooltip: "Delete Comment",
                               onPressed: () async {
                                 await _deleteEmployeeComment(item["_id"]);
                               },
                             ),
-                        ),
-                      );
-                    },
-                  ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Close"),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Close"),
-            )
-          ],
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              "❌ Failed to load employee feedback (HTTP ${response.statusCode})"),
-        ),
-      );
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "❌ Failed to load employee feedback (HTTP ${response.statusCode})",
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("❌ Error: $e")));
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("❌ Error: $e")),
-    );
   }
-}
-
 
   /*// ✅ Helper: format date nicely
   String _formatDate(dynamic iso) {
@@ -277,16 +303,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }*/
   String _formatDate(dynamic dateStr) {
-  if (dateStr == null) return '';
-  try {
-    final parsed = DateTime.tryParse(dateStr.toString());
-    if (parsed == null) return dateStr.toString();
-    return DateFormat('yyyy-MM-dd hh:mm a').format(parsed.toLocal());
-  } catch (e) {
-    return dateStr.toString();
+    if (dateStr == null) return '';
+    try {
+      final parsed = DateTime.tryParse(dateStr.toString());
+      if (parsed == null) return dateStr.toString();
+      return DateFormat('yyyy-MM-dd hh:mm a').format(parsed.toLocal());
+    } catch (e) {
+      return dateStr.toString();
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +331,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
 
     return Sidebar(
-      title: 'AdminDashboard',
+      title: 'TLDashboard',
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,7 +390,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
               context,
               MaterialPageRoute(
                 builder: (_) => AdminNotificationsPage(
-                  empId: Provider.of<UserProvider>(
+                  empId:
+                      Provider.of<UserProvider>(
                         context,
                         listen: false,
                       ).employeeId ??
@@ -375,10 +401,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
             );
           }),
           _quickActionButton('Performance Review', () {
-            final userProvider = Provider.of<UserProvider>(context, listen: false);
+            final userProvider = Provider.of<UserProvider>(
+              context,
+              listen: false,
+            );
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => PerformanceReviewPage(currentUserId: userProvider.employeeId!)),
+              MaterialPageRoute(
+                builder: (_) => PerformanceReviewPage(
+                  currentUserId: userProvider.employeeId!,
+                ),
+              ),
             );
           }),
           _quickActionButton('Employee Feedback', _showEmployeeComments),
@@ -399,12 +432,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          const LeaveApprovalPage(userRole: "admin"),
+                      builder: (context) {
+                        // Fetch count again when navigating
+                        return const LeaveApprovalPage(userRole: "tl");
+                      },
                     ),
                   ).then((_) {
                     // refresh badge after returning
-                    fetchPendingCount("admin");
+                    _refreshPendingCount();
                   });
                 }),
                 if (_pendingCount > 0)

@@ -1,3 +1,4 @@
+//routes/leave.js
 const mongoose = require("mongoose");
 const express = require("express");
 const router = express.Router();
@@ -54,6 +55,7 @@ function approverForPosition(position) {
 
   if (p === "employee") return "admin";
   if (p === "admin") return "founder";
+  if (p === "tl") return "founder";
   if (p === "founder" || p === "hr"  || p === "superadmin") return "auto-approved";
 
   return "admin"; // fallback
@@ -109,6 +111,43 @@ function parseDateInput(input, endOfDay = false) {
 
 // -------------------- Routes --------------------
 
+// ✅ New Route: Get approvers for an employee
+router.get("/approvers/:employeeId", async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const employee = await Employee.findOne({ employeeId: employeeId.trim() });
+
+    if (!employee) {
+      return res.status(404).json({ message: "❌ Employee not found" });
+    }
+
+    const position = normalize(employee.position);
+    
+    // If employee or intern, find their domain's TL.
+    if (position === "employee" || position === "intern" || position === "tech trainee") {
+      const employeeDomain = employee.domain;
+      if (!employeeDomain) {
+        return res.status(400).json({ message: "❌ Employee domain not set" });
+      }
+      // This is the database query that finds the TL in the same domain.
+      const approvers = await Employee.find({ position: "TL", domain: employeeDomain }, 'employeeId employeeName');
+      return res.json(approvers);
+    } 
+    // If the user is a TL, their approver is HR.
+    else if (position === "tl") {
+      const approvers = await Employee.find({ position: "HR" }, 'employeeId employeeName');
+      return res.json(approvers);
+    } 
+    // For other roles, return an empty list.
+    else {
+      return res.json([]); 
+    }
+  } catch (err) {
+    res.status(500).json({ message: "❌ Server error fetching approvers" });
+  }
+});
+
+
 // 1) Employee Login 
 router.post("/employee-login", async (req, res) => {
   const { employeeId, employeeName, position } = req.body;
@@ -160,11 +199,11 @@ router.post("/employee-login", async (req, res) => {
 router.post("/apply-leave", async (req, res) => {
   try {
     const {
-      employeeId, employeeName, position,
+      employeeId, employeeName, position, approverId, // ✅ Added approverId
       leaveType, fromDate, toDate, reason, numberOfDays,
     } = req.body;
 
-    if (!employeeId || !employeeName || !position || !leaveType || !fromDate || !toDate) {
+    if (!employeeId || !employeeName || !position || !leaveType || !fromDate || !toDate || !approverId) {
       return res.status(400).json({ message: "❌ Required fields missing" });
     }
 
@@ -183,7 +222,7 @@ router.post("/apply-leave", async (req, res) => {
       return res.status(400).json({ message: "❌ toDate must be same or after fromDate" });
     }
 
-    const approver = approverForPosition(position);
+    // const approver = approverForPosition(position); // ❌ No longer needed
     const applicantRole = position.toLowerCase();   // ✅ add this
 
     const days = Number.isFinite(Number(numberOfDays)) && Number(numberOfDays) > 0
@@ -195,13 +234,13 @@ router.post("/apply-leave", async (req, res) => {
       employeeName,
       position,
       leaveType,
-      approver,
+      approver: approverId, // ✅ Use approverId from request
       applicantRole,   // ✅ add this
       fromDate: from,
       toDate: to,
       reason,
       numberOfDays: days,
-      status: approver === "auto-approved" ? "Approved" : "Pending",
+      status: "Pending", // All leaves go to pending now
     };
 
     const newLeave = new Leave(payload);
@@ -220,25 +259,34 @@ router.post("/apply-leave", async (req, res) => {
 // Leave Approvals
 router.get("/leave-approvals/:employeeId", async (req, res) => {
   try {
-    const { employeeId } = req.params;
-    const approverUser = await Employee.findOne({ employeeId: employeeId.trim() });
+    const loggedInEmployeeId = req.params.employeeId.trim();
+    const approverUser = await Employee.findOne({ employeeId: loggedInEmployeeId });
     if (!approverUser) return res.status(404).json({ message: "❌ Approver not found" });
 
-    let role = normalize(approverUser.position);
+    const approverRole = normalize(approverUser.position);
 
-// 🔹 Founder and HR can both view same pending list
-    let approverRoles;
-if (role === "founder" || role === "hr" || role === "superadmin") {
-  approverRoles = ["admin", "founder", "hr"]; // ✅ all pending
-} else {
-  approverRoles = [role];
-}
+    let findCondition = {
+      status: "Pending",
+      employeeId: { $ne: loggedInEmployeeId }, // Don't show own requests
+    };
 
+    // HR and Founder see requests from employees/interns (assigned to a TL) AND requests from TLs.
+    if (approverRole === 'hr' || approverRole === 'founder') {
+      findCondition.$or = [
+        { applicantRole: { $in: ["employee", "intern", "tech trainee"] } }, // Any request from an employee or intern
+        { applicantRole: "tl" } // Any request from a TL (which goes to HR)
+      ];
+    } 
+    // A TL sees only the requests specifically assigned to them.
+    else if (approverRole === 'tl') {
+      findCondition.approver = loggedInEmployeeId;
+    } else {
+      // Other roles (like Founder) might have different logic, but for now, they see nothing by default.
+      findCondition._id = null; // No results
+    }
 
     const leaves = await Leave.find({
-      approver: { $in: approverRoles },
-      status: { $in: ["Pending"] },
-      employeeId: { $ne: approverUser.employeeId },
+      ...findCondition
     }).sort({ createdAt: -1 });
 
 
@@ -312,7 +360,7 @@ router.get("/get-employee-name/:employeeId", async (req, res) => {
 
     if (!emp) return res.status(404).json({ message: "❌ Employee not found" });
 
-    res.json({ employeeName: emp.employeeName, position: emp.position });
+    res.json({ employeeName: emp.employeeName, position: emp.position, domain: emp.domain });
   } catch (err) {
     res.status(500).json({ message: "❌ Internal server error" });
   }
@@ -321,36 +369,39 @@ router.get("/get-employee-name/:employeeId", async (req, res) => {
 
 // ✅ Pending count for Admin / Founder / HR / SuperAdmin dashboards
 router.get("/pending-count", async (req, res) => {
-  try {
-    const approver = normalize(req.query.approver); // admin | founder | hr | superadmin
-    if (!approver)
-      return res.status(400).json({ message: "❌ approver is required" });
+    try {
+        const approverRole = normalize(req.query.approver);
+        const approverId = req.query.approverId; // Pass the approver's employeeId from the frontend
 
-    let matchCondition = { status: "Pending" };
+        if (!approverRole) {
+            return res.status(400).json({ message: "❌ approver role is required" });
+        }
 
-    if (approver === "superadmin" || approver === "founder" || approver === "hr") {
-      // ✅ SuperAdmin, Founder, HR see pending requests from admins and employees
-      matchCondition = {
-        status: "Pending",
-        approver: { $in: ["admin", "founder", "hr"] },
-      };
-    } else if (approver === "admin") {
-      // ✅ Admin sees only employee requests
-      matchCondition = {
-        status: "Pending",
-        approver: "admin",
-      };
-    } else {
-      // Employees don’t approve anything
-      matchCondition = { _id: null };
+        let matchCondition = {
+            status: "Pending",
+        };
+
+        if (approverRole === 'superadmin' || approverRole === 'founder' || approverRole === 'hr') {
+            // Superadmin, Founder, and HR see requests from TLs and other roles they manage.
+            // This logic assumes they see all pending requests not made by themselves.
+            if (approverId) {
+                matchCondition.employeeId = { $ne: approverId };
+            }
+        } else if (approverRole === 'tl') {
+            // A TL sees only the requests specifically assigned to them.
+            if (!approverId) return res.status(400).json({ message: "❌ approverId is required for TL" });
+            matchCondition.approver = approverId;
+        } else {
+            // Other roles see no pending requests by default.
+            return res.json({ pendingCount: 0 });
+        }
+
+        const count = await Leave.countDocuments(matchCondition);
+        res.json({ pendingCount: count });
+    } catch (err) {
+        console.error("❌ pending-count error:", err);
+        res.status(500).json({ message: "❌ Internal server error" });
     }
-
-    const count = await Leave.countDocuments(matchCondition);
-    res.json({ pendingCount: count });
-  } catch (err) {
-    console.error("❌ pending-count error:", err);
-    res.status(500).json({ message: "❌ Internal server error" });
-  }
 });
 
 
@@ -471,6 +522,24 @@ async function updateStatus(req, res) {
   }
 }
 router.put("/status/:id", updateStatus);
+
+router.put("/status/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!["Approved", "Rejected"].includes(status)) {
+            return res.status(400).json({ message: "❌ Invalid status value" });
+        }
+
+        const updatedLeave = await Leave.findByIdAndUpdate(id, { status }, { new: true });
+        if (!updatedLeave) return res.status(404).json({ message: "❌ Leave not found" });
+
+        res.json({ message: `✅ Leave ${status}`, leave: formatLeaveDates(updatedLeave) });
+    } catch (err) {
+        res.status(500).json({ message: "❌ Server error" });
+    }
+});
 router.put("/update/:id", updateStatus);
 
 // Leave Balance
