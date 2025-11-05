@@ -40,7 +40,8 @@ app.use((req, res, next) => {
 
 app.use(cors({
   origin: [
-    "https://zeaisoft-hrm.netlify.app", // 🔁 Replace with your actual Netlify domain
+    "https://zeaisoft-hrm.netlify.app",
+    "https://zeai-hrm-1.onrender.com", // 🔁 Replace with your actual Netlify domain
     //"http://localhost:3000" // for local testing (optional)
   ],
   methods: ["GET", "POST", "PUT", "DELETE"],
