@@ -67,7 +67,7 @@ class ReportsAnalyticsPage extends StatefulWidget {
 }
 
 class _ReportsAnalyticsPageState extends State<ReportsAnalyticsPage> {
-  final String apiBase = 'https://zeai-hrm-1.onrender.com';
+  final String apiBase = 'https://hrm-backend-rm6c.onrender.com';
   final String listPath = '/reports';
   final String detailsPath = '/reports';
 

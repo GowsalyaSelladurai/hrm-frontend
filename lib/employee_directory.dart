@@ -27,7 +27,7 @@ class EmployeeDirectoryPageState extends State<EmployeeDirectoryPage> {
   Future<void> fetchEmployees() async {
     try {
       final response = await http.get(
-        Uri.parse("https://zeai-hrm-1.onrender.com/api/employees"),
+        Uri.parse("https://hrm-backend-rm6c.onrender.com/api/employees"),
       );
 
       if (response.statusCode == 200) {
@@ -180,7 +180,7 @@ class _EmployeeGridState extends State<_EmployeeGrid> {
         final emp = _filteredEmployees[index];
         final imagePath = emp['employeeImage'];
         final imageUrl = (imagePath != null && imagePath.isNotEmpty)
-            ? "https://zeai-hrm-1.onrender.com$imagePath"
+            ? "https://hrm-backend-rm6c.onrender.com$imagePath"
             : "";
         return _employeeCard(
           emp['employeeId'] ?? "",

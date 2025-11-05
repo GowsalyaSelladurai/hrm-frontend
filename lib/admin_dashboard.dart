@@ -71,7 +71,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     try {
       final response = await http.get(
-        Uri.parse("https://zeai-hrm-1.onrender.com/get-employee-name/$employeeId"),
+        Uri.parse("https://hrm-backend-rm6c.onrender.com/get-employee-name/$employeeId"),
       );
 
       if (response.statusCode == 200) {
@@ -105,7 +105,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       final year = DateTime.now().year;
       final url =
-          "https://zeai-hrm-1.onrender.com/apply/leave-balance/$employeeId?year=$year";
+          "https://hrm-backend-rm6c.onrender.com/apply/leave-balance/$employeeId?year=$year";
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -143,7 +143,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       final response = await http.get(
         Uri.parse(
           // Pass both role and ID to the backend
-          "https://zeai-hrm-1.onrender.com/apply/pending-count?approver=$userRole&approverId=$employeeId",
+          "https://hrm-backend-rm6c.onrender.com/apply/pending-count?approver=$userRole&approverId=$employeeId",
         ),
       );
 
@@ -164,7 +164,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _deleteEmployeeComment(String id) async {
     try {
       final response = await http.delete(
-        Uri.parse("https://zeai-hrm-1.onrender.com/review-decision/$id"),
+        Uri.parse("https://hrm-backend-rm6c.onrender.com/review-decision/$id"),
       );
 
       if (response.statusCode == 200) {
@@ -191,7 +191,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     try {
       final response = await http.get(
         Uri.parse(
-          "https://zeai-hrm-1.onrender.com/review-decision/feedback?positions=employee,intern",
+          "https://hrm-backend-rm6c.onrender.com/review-decision/feedback?positions=employee,intern",
         ),
         headers: {"Accept": "application/json"},
       );

@@ -49,7 +49,7 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
   Future<void> _fetchAllEmployees() async {
     try {
       final response = await http.get(
-        Uri.parse('https://zeai-hrm-1.onrender.com/api/employees/for-review'),
+        Uri.parse('https://hrm-backend-rm6c.onrender.com/api/employees/for-review'),
       );
 
       if (response.statusCode == 200) {
@@ -100,7 +100,7 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
       return;
     }
 
-    final url = Uri.parse('https://zeai-hrm-1.onrender.com/reviews');
+    final url = Uri.parse('https://hrm-backend-rm6c.onrender.com/reviews');
     final reviewerName =
         Provider.of<UserProvider>(context, listen: false).employeeName ??
         'Admin';
@@ -132,7 +132,7 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
         );
 
         // 🔔 Create notifications
-        final notifUrl = Uri.parse("https://zeai-hrm-1.onrender.com/notifications");
+        final notifUrl = Uri.parse("https://hrm-backend-rm6c.onrender.com/notifications");
         String currentMonth = getCurrentMonth();
         final userProvider = Provider.of<UserProvider>(context, listen: false);
         final adminName = userProvider.employeeName ?? 'Super Admin';

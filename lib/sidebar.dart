@@ -48,7 +48,7 @@ class _SidebarState extends State<Sidebar> {
 
     try {
       final response = await http.get(
-        Uri.parse('https://zeai-hrm-1.onrender.com/apply/get-employee-name/$employeeId'),
+        Uri.parse('https://hrm-backend-rm6c.onrender.com/apply/get-employee-name/$employeeId'),
       );
 
       if (response.statusCode == 200) {

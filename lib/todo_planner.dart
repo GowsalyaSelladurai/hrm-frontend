@@ -27,7 +27,7 @@ class _ToDoPlannerState extends State<ToDoPlanner> {
   final statusOptions = ['Yet to start', 'In progress', 'Completed','Hold'];
   final workStatusOptions = ['WFH', 'WFO', 'Casual leave', 'Sick leave', 'Sad leave', 'Holiday'];
 
-  final String baseUrl = 'https://zeai-hrm-1.onrender.com/todo_planner';
+  final String baseUrl = 'https://hrm-backend-rm6c.onrender.com/todo_planner';
 
   @override
   void initState() {  

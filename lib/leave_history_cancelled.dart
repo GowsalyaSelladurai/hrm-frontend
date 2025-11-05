@@ -16,7 +16,7 @@ class LeaveHistoryCancelled extends StatefulWidget {
 class _LeaveHistoryCancelledState extends State<LeaveHistoryCancelled> {
   Future<List<Map<String, dynamic>>>? _cancelledLeavesFuture;
 
-  static const String baseUrl = 'https://zeai-hrm-1.onrender.com/apply/cancelled';
+  static const String baseUrl = 'https://hrm-backend-rm6c.onrender.com/apply/cancelled';
 
   @override
   void initState() {

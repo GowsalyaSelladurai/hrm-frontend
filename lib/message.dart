@@ -30,7 +30,7 @@ class _MsgPageState extends State<MsgPage> {
   Future<void> fetchEmployeeDetails() async {
     try {
       final response = await http.get(
-        Uri.parse("https://zeai-hrm-1.onrender.com/api/employees/${widget.employeeId}"),
+        Uri.parse("https://hrm-backend-rm6c.onrender.com/api/employees/${widget.employeeId}"),
       );
 
       if (response.statusCode == 200) {
@@ -88,7 +88,7 @@ class _MsgPageState extends State<MsgPage> {
 
         // 🔴 API ku POST panna
         final response = await http.post(
-          Uri.parse("https://zeai-hrm-1.onrender.com/notifications"),
+          Uri.parse("https://hrm-backend-rm6c.onrender.com/notifications"),
           headers: {"Content-Type": "application/json"},
           body: json.encode({
             "month": month,
@@ -148,7 +148,7 @@ class _MsgPageState extends State<MsgPage> {
                     backgroundImage: (employeeData?['employeeImage'] != null &&
                             employeeData!['employeeImage'].isNotEmpty)
                         ? NetworkImage(
-                            "https://zeai-hrm-1.onrender.com${employeeData!['employeeImage']}")
+                            "https://hrm-backend-rm6c.onrender.com${employeeData!['employeeImage']}")
                         : const AssetImage("assets/profile.png")
                             as ImageProvider,
                   ),

@@ -68,8 +68,8 @@ class _EmployeeNotificationsPageState extends State<SuperadminNotificationsPage>
     });
 /*
     final uri = Uri.parse(
-      //"https://zeai-hrm-1.onrender.com/notifications/$selectedMonth/${widget.empId}",
-      "https://zeai-hrm-1.onrender.com/api/notifications/employee/${widget.empId}",
+      //"https://hrm-backend-rm6c.onrender.com/notifications/$selectedMonth/${widget.empId}",
+      "https://hrm-backend-rm6c.onrender.com/api/notifications/employee/${widget.empId}",
     );
     */
     try {
@@ -90,7 +90,7 @@ class _EmployeeNotificationsPageState extends State<SuperadminNotificationsPage>
   /// 🔹 Fetch SMS Notifications
   Future<void> fetchSmsNotifications() async {
     final uri = Uri.parse(
-        "https://zeai-hrm-1.onrender.com/notifications/employee/${widget.empId}?month=$selectedMonth&category=message");
+        "https://hrm-backend-rm6c.onrender.com/notifications/employee/${widget.empId}?month=$selectedMonth&category=message");
     final resp = await http.get(uri);
 
     if (resp.statusCode == 200) {
@@ -113,8 +113,8 @@ class _EmployeeNotificationsPageState extends State<SuperadminNotificationsPage>
   /// 🔹 Fetch Performance Notifications
   Future<void> fetchPerformanceNotifications() async {
     final uri = Uri.parse(
-       // "https://zeai-hrm-1.onrender.com/api/notifications/$selectedMonth/${widget.empId}");
-       "https://zeai-hrm-1.onrender.com/notifications/performance/employee/$selectedMonth/${widget.empId}");
+       // "https://hrm-backend-rm6c.onrender.com/api/notifications/$selectedMonth/${widget.empId}");
+       "https://hrm-backend-rm6c.onrender.com/notifications/performance/employee/$selectedMonth/${widget.empId}");
     final resp = await http.get(uri);
 
     if (resp.statusCode == 200) {
@@ -153,7 +153,7 @@ class _EmployeeNotificationsPageState extends State<SuperadminNotificationsPage>
   /// 🔹 Fetch Holiday Notifications
   Future<void> fetchHolidayNotifications() async {
     final uri = Uri.parse(
-        "https://zeai-hrm-1.onrender.com/notifications/holiday/employee/${widget.empId}?month=$selectedMonth");
+        "https://hrm-backend-rm6c.onrender.com/notifications/holiday/employee/${widget.empId}?month=$selectedMonth");
     final resp = await http.get(uri);
 
     if (resp.statusCode == 200) {

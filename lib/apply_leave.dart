@@ -68,7 +68,7 @@ class _ApplyLeaveState extends State<ApplyLeave> {
   Future<void> fetchEmployeeName(String employeeId) async {
     try {
       final response = await http.get(
-        Uri.parse('https://zeai-hrm-1.onrender.com/get-employee-name/$employeeId'),
+        Uri.parse('https://hrm-backend-rm6c.onrender.com/get-employee-name/$employeeId'),
       );
 
       if (response.statusCode == 200) {
@@ -87,7 +87,7 @@ class _ApplyLeaveState extends State<ApplyLeave> {
   Future<void> _fetchApprovers(String employeeId) async {
     try {
       final response = await http.get(
-        Uri.parse('https://zeai-hrm-1.onrender.com/apply/approvers/$employeeId'),
+        Uri.parse('https://hrm-backend-rm6c.onrender.com/apply/approvers/$employeeId'),
       );
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
@@ -196,8 +196,8 @@ class _ApplyLeaveState extends State<ApplyLeave> {
     final isEditing = widget.existingLeave != null;
     final leaveId = widget.existingLeave?['_id'];
     final url = isEditing
-        ? 'https://zeai-hrm-1.onrender.com/apply/update/$employeeId/$leaveId'
-        : 'https://zeai-hrm-1.onrender.com/apply/apply-leave';
+        ? 'https://hrm-backend-rm6c.onrender.com/apply/update/$employeeId/$leaveId'
+        : 'https://hrm-backend-rm6c.onrender.com/apply/apply-leave';
 
     final response = await (isEditing
         ? http.put(
