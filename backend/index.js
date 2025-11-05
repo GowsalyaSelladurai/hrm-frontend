@@ -28,7 +28,7 @@ const payslipRoutes = require('./routes/payslip');
 // ---------------- EXPRESS APP SETUP ---------------- //
 const app = express();
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGODB_URI;
 
 // 🔹 Request logger
 app.use((req, res, next) => {
