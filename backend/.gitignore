@@ -14,3 +14,19 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.log
+
+# Uploads and generated files
+uploads/
+public/uploads/
+dist/
+build/
+
+# Environment and config backups
+.env.local
+.env.production
+.env.development
+
+# Editor folders and cache
+.vscode/
+.idea/
+*.swp
