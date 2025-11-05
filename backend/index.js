@@ -30,11 +30,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// ---------------- MIDDLEWARE ---------------- //
+// 🔹 Request logger
 app.use((req, res, next) => {
   console.log(`📥 ${req.method} ${req.originalUrl}`);
   next();
 });
+
+// ---------------- MIDDLEWARE ---------------- //
 
 app.use(cors({
   origin: [
@@ -45,8 +47,11 @@ app.use(cors({
   credentials: true
 }));
 
+app.options('*', cors()); // ✅ Handles all OPTIONS requests
+// 🔹 Parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// 🔹 Static uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ---------------- ROUTES ---------------- //
