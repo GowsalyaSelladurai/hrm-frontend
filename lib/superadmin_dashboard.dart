@@ -11,6 +11,7 @@ import 'dart:io' show File; // Only used on mobile
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:intl/intl.dart';
 
 import 'user_provider.dart';
 import 'sidebar.dart';
@@ -619,21 +620,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   }
 
   /// Helper: format date in YYYY-MM-DD hh:mm with zero padding
-  String _formatDate(dynamic iso) {
-    if (iso == null) return 'N/A';
-    try {
-      final dt = DateTime.tryParse(iso.toString());
-      if (dt == null) return iso.toString();
-      String y = dt.year.toString();
-      String m = dt.month.toString().padLeft(2, '0');
-      String d = dt.day.toString().padLeft(2, '0');
-      String hh = dt.hour.toString().padLeft(2, '0');
-      String mm = dt.minute.toString().padLeft(2, '0');
-      return "$y-$m-$d $hh:$mm";
-    } catch (_) {
-      return iso.toString();
-    }
+String _formatDate(dynamic iso) {
+  if (iso == null) return 'N/A';
+  try {
+    final dt = DateTime.parse(iso.toString()).toLocal();
+    return DateFormat('yyyy-MM-dd hh:mm a').format(dt); // 2025-10-03 12:09 PM
+  } catch (_) {
+    return iso.toString();
   }
+}
 
   /// 🔹 Fetch pending change requests
   Future<List<dynamic>> _fetchPendingRequests() async {

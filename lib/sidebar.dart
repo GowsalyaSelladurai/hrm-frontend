@@ -106,9 +106,9 @@ class _SidebarState extends State<Sidebar> {
 
   Widget _buildHeader(BuildContext context) {
     final Map<String, Widget> pageMap = {
-      'Dashboard': const EmployeeDashboard(),
-      'TLDashboard': const AdminDashboard(),
-      'SuperAdminDashboard': const SuperAdminDashboard(),
+      // 'Dashboard': const EmployeeDashboard(),
+      // 'TLDashboard': const AdminDashboard(),
+      // 'SuperAdminDashboard': const SuperAdminDashboard(),
       'Leave Management': const LeaveManagement(),
       'Payroll Management': const EmpPayroll(),
       'Attendance System': AttendanceLoginPage(),
@@ -118,10 +118,10 @@ class _SidebarState extends State<Sidebar> {
         empId:
             Provider.of<UserProvider>(context, listen: false).employeeId ?? '',
       ),
-      'AdminNotification': AdminNotificationsPage(
-        empId:
-            Provider.of<UserProvider>(context, listen: false).employeeId ?? '',
-      ),
+      // 'AdminNotification': AdminNotificationsPage(
+      //   empId:
+      //       Provider.of<UserProvider>(context, listen: false).employeeId ?? '',
+      // ),
       'Employee Profile': EmployeeProfilePage(),
       'Company Events': const CompanyEventsScreen(),
     };
