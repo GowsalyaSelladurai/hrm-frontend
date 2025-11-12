@@ -76,7 +76,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
   }
 
   Future<int> fetchWorkingDays(String employeeId, int month, int year) async {
-    var url = Uri.parse("https://hrm-backend-rm6c.onrender.com/attendance/attendance/history/$employeeId");
+    var url = Uri.parse("https://hrm-backend-rm6c.onrender.com/attendance/attendance/monthly/$employeeId/$month/$year");
     var response = await http.get(url);
 
     if (response.statusCode == 200) {

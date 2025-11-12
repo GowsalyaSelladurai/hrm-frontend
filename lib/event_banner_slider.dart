@@ -1,7 +1,10 @@
+//event_banner_slider.dart
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class EventBannerSlider extends StatefulWidget {
   const EventBannerSlider({super.key});
@@ -17,8 +20,10 @@ class _EventBannerSliderState extends State<EventBannerSlider> {
 
   DateTime? _parseDate(String dateStr) {
   try {
-    // Handle DD-MM-YYYY specifically
-    final parts = dateStr.split('-');
+    // Normalize separators
+    final normalized = dateStr.replaceAll('/', '-');
+    final parts = normalized.split('-');
+
     if (parts.length == 3) {
       final day = int.tryParse(parts[0]);
       final month = int.tryParse(parts[1]);
@@ -95,7 +100,7 @@ class _EventBannerSliderState extends State<EventBannerSlider> {
           });
         }
 
-        // final doj = _parseDate(emp['date_of_appointment'] ?? '');
+        //final doj = _parseDate(emp['date_of_appointment'] ?? '');
         // if (doj != null && doj.month == today.month && doj.day == today.day) {
         //   final years = today.year - doj.year;
         //   events.add({
@@ -122,7 +127,7 @@ class _EventBannerSliderState extends State<EventBannerSlider> {
           final date = parts[1].trim();
           events.add({
             'title': '$name Celebration',
-            'subtitle': 'On $date — Enjoy your holiday!',
+            'subtitle': 'On $date — Enjoy your holiday! 🎉',
             'asset': 'assets/event-png/holiday.png',
             'bg': const Color.fromARGB(200, 255, 165, 0), // Festive orange
             'textColor': Colors.white,
@@ -136,6 +141,34 @@ class _EventBannerSliderState extends State<EventBannerSlider> {
             'textColor': Colors.white,
           });
         }
+      }
+    }
+
+    // === 🏢 Company Events (from backend) ===
+    final responseCompanyEvents = await http.get(
+      Uri.parse('https://hrm-backend-rm6c.onrender.com/company-events'),
+    );
+
+    if (responseCompanyEvents.statusCode == 200) {
+      final List<dynamic> companyEvents = json.decode(responseCompanyEvents.body);
+
+      for (var event in companyEvents) {
+        final title = event['title'] ?? 'Company Event';
+        final venue = event['venue'] ?? '';
+        final date = event['dateTime'] != null
+            ? DateTime.parse(event['dateTime']).toLocal()
+            : null;
+        final formattedDate = date != null
+             ? DateFormat('dd-MM-yyyy, hh:mm a').format(date)
+            : 'Date TBD';
+
+        events.add({
+          'title': '🏢 $title',
+          'subtitle': '$venue — $formattedDate',
+          'asset': 'assets/event-png/meeting.png',
+          'bg': const Color.fromARGB(200, 33, 150, 243), // Blue tone
+          'textColor': Colors.white,
+        });
       }
     }
 
@@ -154,7 +187,7 @@ class _EventBannerSliderState extends State<EventBannerSlider> {
       {
         'day': '30',
         'weekday': 'Sun',
-        'title': '☁️ Partnership with Microsoft & AWS',
+        'title': '☁ Partnership with Microsoft & AWS',
         'subtitle': 'Expanding our cloud ecosystem',
         'time': '02:00 PM',
         'asset': 'assets/event-png/microsoft_aws.png',
@@ -182,6 +215,7 @@ class _EventBannerSliderState extends State<EventBannerSlider> {
     debugPrint('Error fetching events: $e');
   }
 }
+
 
   @override
   void dispose() {

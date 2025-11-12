@@ -26,6 +26,7 @@ import 'leave_approval.dart';
 //import 'adminperformance.dart'; // for Performance Review
 import 'superadmin_performance.dart'; // ✅ for SuperadminPerformancePageReview
 import 'employee_list.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SuperAdminDashboard extends StatefulWidget {
   const SuperAdminDashboard({super.key});
@@ -619,6 +620,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     });
   }
 
+ 
   /// Helper: format date in YYYY-MM-DD hh:mm with zero padding
 String _formatDate(dynamic iso) {
   if (iso == null) return 'N/A';
@@ -841,11 +843,13 @@ String _formatDate(dynamic iso) {
         : "employee";
 
     return Center(
-      child: Wrap(
+      child: Wrap(  
         spacing: 90,
         runSpacing: 20,
         alignment: WrapAlignment.center,
         children: [
+
+           
           _quickActionButton('Apply Leave', () {
             Navigator.push(
               context,
@@ -895,12 +899,18 @@ String _formatDate(dynamic iso) {
           }),
           _quickActionButton('Employee Feedback', _showEmployeeComments),
           _quickActionButton('Request', _showChangeRequests),
-          _quickActionButton('Company Events', () {
+          _quickActionButton('Company Events', () async {
+            final prefs = await SharedPreferences.getInstance();
+            final position = prefs.getString('position') ?? '';
+
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const CompanyEventsScreen()),
+              MaterialPageRoute(
+                builder: (_) => CompanyEventsScreen(isHR: position == 'HR'),
+              ),
             );
           }),
+
           _quickActionButton('Add Employee', _showAddEmployeeDialog),
           _quickActionButton('Employee List', () {
             Navigator.push(
@@ -958,6 +968,8 @@ String _formatDate(dynamic iso) {
       ),
     );
   }
+
+  
 
   Widget _quickActionButton(String title, VoidCallback onPressed) {
     return ElevatedButton(

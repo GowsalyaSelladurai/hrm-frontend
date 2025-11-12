@@ -88,7 +88,7 @@ class _EmpPayrollState extends State<EmpPayroll> {
 Future<int> fetchWorkingDays(String employeeId, int month, int year) async {
   try {
     final response = await http.get(
-      Uri.parse("https://hrm-backend-rm6c.onrender.com/attendance/attendance/history/$employeeId"),
+      Uri.parse("https://hrm-backend-rm6c.onrender.com/attendance/attendance/monthly/$employeeId/$month/$year"),
     );
 
     if (response.statusCode == 200) {
