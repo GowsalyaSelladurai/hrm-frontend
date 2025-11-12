@@ -24,6 +24,7 @@ const notificationRoutes = require('./routes/notifications');
 const requestsRoutes = require('./routes/changeRequests');
 const uploadRoutes = require('./routes/upload');
 const payslipRoutes = require('./routes/payslip');
+const companyEventRoutes = require('./routes/companyEvent');
 
 // ---------------- EXPRESS APP SETUP ---------------- //
 const app = express();
@@ -69,6 +70,7 @@ app.use('/notifications', notificationRoutes);
 app.use('/requests', requestsRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/payslip', payslipRoutes);
+app.use('/company-events', companyEventRoutes);
 
 // ---------------- PAYSLIP APIs ---------------- //
 app.get('/get-payslip-details', async (req, res) => {

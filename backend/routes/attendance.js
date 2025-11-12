@@ -198,7 +198,24 @@ if (breakStatus === "BreakOff" && todayRecord.breakInProgress) {
   }
 });
 
+//  ✅ GET: All attendance for a specific month & year (for payroll/LOP)
+router.get("/attendance/monthly/:employeeId/:month/:year", async (req, res) => {
+  try {
+    const { employeeId, month, year } = req.params;
+    const allRecords = await Attendance.find({ employeeId });
 
+    const filtered = allRecords.filter((record) => {
+      if (!record.date || !record.loginTime) return false;
+      const [day, m, y] = record.date.split("-"); // dd-MM-yyyy
+      return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
+    });
+
+    res.status(200).json(filtered);
+  } catch (error) {
+    console.error("❌ Error fetching monthly attendance:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
 
 // ✅ GET: Last 5 records
 router.get("/attendance/history/:employeeId", async (req, res) => {
