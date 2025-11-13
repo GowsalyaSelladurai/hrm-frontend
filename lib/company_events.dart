@@ -185,7 +185,9 @@ class _CompanyEventsScreenState extends State<CompanyEventsScreen> {
           ElevatedButton(
             onPressed: () async {
               if (titleController.text.trim().isEmpty ||
-                  venueController.text.trim().isEmpty) return;
+                  venueController.text.trim().isEmpty) {
+                return;
+              }
 
               final event = CompanyEvent(
                 id: existingEvent?.id ??
