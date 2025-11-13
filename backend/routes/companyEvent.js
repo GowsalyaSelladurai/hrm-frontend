@@ -17,6 +17,7 @@ router.get('/', async (req, res) => {
 // POST new event
 router.post('/', async (req, res) => {
   try {
+    const { id, _id, ...eventData } = req.body; // ignore id/_id
     const event = new CompanyEvent(req.body);
     await event.save();
     res.status(201).json(event);
@@ -28,6 +29,7 @@ router.post('/', async (req, res) => {
 // PUT update event
 router.put('/:id', async (req, res) => {
   try {
+    const { id, _id, ...updateData } = req.body;
     const event = await CompanyEvent.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!event) return res.status(404).json({ message: 'Event not found' });
     res.status(200).json(event);
