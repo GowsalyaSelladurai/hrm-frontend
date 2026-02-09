@@ -4,7 +4,7 @@ const router = express.Router();
 const mongoose = require("mongoose");
 
 const Attendance = require("../models/attendance");
-const Leave = require("../models/Leave");
+const Leave = require("../models/leave");
 const Employee = require("../models/employee");
 
 // Helper: count business days (Mon-Fri) in a given month/year

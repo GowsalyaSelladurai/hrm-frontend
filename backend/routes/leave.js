@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const express = require("express");
 const router = express.Router();
 
-const Leave = require("../models/Leave");
+const Leave = require("../models/leave");
 const LeaveBalance = require("../models/leaveBalance");
 const Employee = require("../models/employee");
 
