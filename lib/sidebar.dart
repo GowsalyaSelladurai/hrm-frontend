@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:zeai_project/recruitment.dart';
 //import 'package:zeai_project/super_admin.dart';
 import 'package:zeai_project/superadmin_dashboard.dart';
 import 'dart:convert';
@@ -19,6 +20,7 @@ import 'employeenotification.dart';
 import 'admin_notification.dart';
 import 'attendance_login.dart';
 import 'company_events.dart';
+import 'superadmin_notification.dart';
 
 class Sidebar extends StatefulWidget {
   final Widget body;
@@ -106,7 +108,7 @@ class _SidebarState extends State<Sidebar> {
 
   Widget _buildHeader(BuildContext context) {
     final Map<String, Widget> pageMap = {
-      // 'Dashboard': const EmployeeDashboard(),
+      //  'Dashboard': const EmployeeDashboard(),
       // 'TLDashboard': const AdminDashboard(),
       // 'SuperAdminDashboard': const SuperAdminDashboard(),
       'Leave Management': const LeaveManagement(),
@@ -327,12 +329,18 @@ class _SidebarState extends State<Sidebar> {
               Icons.notifications,
               'Notifications',
               context,
-              (role == "TL" || role == "Founder" || role == "HR")
-                  ? AdminNotificationsPage(empId: userProvider.employeeId ?? '')
-                  : EmployeeNotificationsPage(
+              (role == "Founder" || role == "HR")
+                  ? SuperadminNotificationsPage(
                       empId: userProvider.employeeId ?? '',
-                    ),
-            ),
+                    )
+                  : (role == "TL")
+                      ? AdminNotificationsPage(
+                          empId: userProvider.employeeId ?? '',
+                        )
+                      : EmployeeNotificationsPage(
+                          empId: userProvider.employeeId ?? '',
+                        ),
+             ),
             _sidebarTile(
               Icons.person,
               'Employee Profile',
@@ -345,6 +353,12 @@ class _SidebarState extends State<Sidebar> {
               'Company Events',
               context,
               const CompanyEventsScreen(),
+            ),
+            _sidebarTile(
+              Icons.event,
+              'Recruitment',
+              context,
+              const RecruitmentHomePage(),
             ),
           ],
         ),

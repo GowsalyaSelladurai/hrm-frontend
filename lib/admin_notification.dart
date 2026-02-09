@@ -1,6 +1,8 @@
+//admin_notification.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'reports.dart';
 import 'sidebar.dart';
@@ -17,37 +19,26 @@ class _AdminNotificationsPageState extends State<AdminNotificationsPage> {
   final Color darkBlue = const Color(0xFF0F1020);
 
   late String selectedMonth;
+  late int selectedYear;
   bool isLoading = false;
   String? error;
-  //int? expandedIndex;
-  // 🔴 red: use expandedKey instead of expandedIndex
   String? expandedKey;
 
   final List<String> months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
   ];
 
   List<Map<String, dynamic>> message = [];
   List<Map<String, dynamic>> performance = [];
-  //List<Map<String, dynamic>> meetings = [];
-  //List<Map<String, dynamic>> events = [];
   List<Map<String, dynamic>> holidays = [];
 
   @override
   void initState() {
     super.initState();
-    selectedMonth = months[DateTime.now().month - 1];
+    final now = DateTime.now();
+    selectedMonth = months[now.month - 1];
+    selectedYear = now.year;
     fetchNotifs();
   }
 
@@ -57,22 +48,15 @@ class _AdminNotificationsPageState extends State<AdminNotificationsPage> {
       error = null;
       message.clear();
       performance.clear();
-     // meetings.clear();
-      //events.clear();
       holidays.clear();
-      //expandedIndex = null;
-      // 🔴 red: reset expandedKey on refresh
       expandedKey = null;
     });
 
-
-try {
-      // 🔹 Call both APIs parallel
+    try {
       await Future.wait([
         fetchSmsNotifications(),
         fetchPerformanceNotifications(),
         fetchHolidayNotifications(),
-        // Future-la meetings/events/holiday/s ku separate API add panna easy
       ]);
     } catch (e) {
       setState(() => error = "Server/network error: $e");
@@ -81,91 +65,58 @@ try {
     }
   }
 
-
-  /// 🔹 Fetch SMS Notifications
   Future<void> fetchSmsNotifications() async {
     final uri = Uri.parse(
-        "https://hrm-backend-rm6c.onrender.com/notifications/employee/${widget.empId}?month=$selectedMonth&category=message");
+      "https://hrm-backend-rm6c.onrender.com/notifications/employee/${widget.empId}?month=$selectedMonth&year=$selectedYear&category=message",
+    );
     final resp = await http.get(uri);
 
     if (resp.statusCode == 200) {
       final decoded = jsonDecode(resp.body);
       if (decoded is List) {
-        setState(() {
-          message = decoded.cast<Map<String, dynamic>>();
-        });
+        setState(() => message = decoded.cast<Map<String, dynamic>>());
       }
     } else if (resp.statusCode == 404) {
-    // 🔹 No SMS → empty list
-    setState(() => message = []);
-  } else {
-      throw Exception(
-          "Failed to load Message notifications. Code: ${resp.statusCode}");
+      setState(() => message = []);
     }
   }
 
-
-  /// 🔹 Fetch Performance Notifications
   Future<void> fetchPerformanceNotifications() async {
     final uri = Uri.parse(
-        //"http://localhost:5000/api/notifications/$selectedMonth/${widget.empId}");
-        "https://hrm-backend-rm6c.onrender.com/notifications/performance/admin/$selectedMonth/${widget.empId}");
+      "https://hrm-backend-rm6c.onrender.com/notifications/performance/admin/$selectedMonth/${widget.empId}?year=$selectedYear",
+    );
     final resp = await http.get(uri);
 
     if (resp.statusCode == 200) {
       final decoded = jsonDecode(resp.body);
       if (decoded is List) {
         setState(() {
-          //performance = decoded.cast<Map<String, dynamic>>();
-          performance =
-                decoded
-                    .where(
-                      (n) =>
-                          (n['category'] as String).toLowerCase() ==
-                          'performance',
-                    )
-                    .cast<Map<String, dynamic>>()
-                    .toList();
-                    holidays =
-                decoded
-                    .where(
-                      (n) =>
-                          (n['category'] as String).toLowerCase() == 'holiday',
-                    )
-                    .cast<Map<String, dynamic>>()
-                    .toList();
-
+          performance = decoded
+              .where((n) => (n['category'] as String).toLowerCase() == 'performance')
+              .cast<Map<String, dynamic>>()
+              .toList();
         });
       }
     } else if (resp.statusCode == 404) {
-    // 🔹 No Performance → empty list
-    setState(() => performance = []);
-  } else {
-      throw Exception(
-          "Failed to load Performance notifications. Code: ${resp.statusCode}");
+      setState(() => performance = []);
     }
   }
+
   Future<void> fetchHolidayNotifications() async {
-  final uri = Uri.parse(
-      "https://hrm-backend-rm6c.onrender.com/notifications/holiday/admin/$selectedMonth");
-  final resp = await http.get(uri);
+    final uri = Uri.parse(
+      "https://hrm-backend-rm6c.onrender.com/notifications/holiday/admin/$selectedMonth?year=$selectedYear",
+    );
+    final resp = await http.get(uri);
 
-  if (resp.statusCode == 200) {
-    final decoded = jsonDecode(resp.body);
-    if (decoded is List) {
-      setState(() {
-        holidays = decoded.cast<Map<String, dynamic>>();
-      });
+    if (resp.statusCode == 200) {
+      final decoded = jsonDecode(resp.body);
+      if (decoded is List) {
+        setState(() => holidays = decoded.cast<Map<String, dynamic>>());
+      }
+    } else if (resp.statusCode == 404) {
+      setState(() => holidays = []);
     }
-  } else if (resp.statusCode == 404) {
-    // 🔹 No Holiday → empty list
-    setState(() => holidays = []);
-  } else {
-    throw Exception(
-        "Failed to load Holiday notifications. Code: ${resp.statusCode}");
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -174,44 +125,54 @@ try {
       body: Column(
         children: [
           _buildHeader(),
+          // 1. Move the Header Row outside of the scrollable area
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Notifications",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: [
+                    _dropdownYear(),
+                    const SizedBox(width: 10),
+                    _dropdownMonth(),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+          // 2. The scrollable content stays inside Expanded
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: ListView(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Notifications",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : error != null
+                      ? Center(
+                          child: Text(
+                            error!,
+                            style: const TextStyle(color: Colors.redAccent),
+                          ),
+                        )
+                      : ListView(
+                          // Add some top padding to the list so it's not cramped
+                          padding: const EdgeInsets.only(top: 14),
+                          children: [
+                            notificationCategory("Performance", performance),
+                            notificationCategory("Message", message),
+                            notificationCategory("Holidays", holidays),
+                            const SizedBox(height: 20), // Bottom padding
+                          ],
                         ),
-                      ),
-                      _dropdownMonth(),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  if (isLoading)
-                    const Center(child: CircularProgressIndicator())
-                  else if (error != null)
-                    Center(
-                      child: Text(
-                        error!,
-                        style: const TextStyle(color: Colors.redAccent),
-                      ),
-                    )
-                  else ...[
-                    notificationCategory("Performance", performance),
-                    notificationCategory("Message", message),
-                    //  notificationCategory("Meetings", meetings),
-                    // notificationCategory("Company Events", events),
-                    notificationCategory("Holidays", holidays),
-                  ],
-                ],
-              ),
             ),
           ),
         ],
@@ -219,10 +180,34 @@ try {
     );
   }
 
+  Widget _dropdownYear() {
+    final years = List.generate(5, (i) => DateTime.now().year - i);
+    return Container(
+      width: 100,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: selectedYear,
+          items: years.map((y) => DropdownMenuItem(value: y, child: Text("$y"))).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              setState(() => selectedYear = val);
+              fetchNotifs();
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _dropdownMonth() {
     return Container(
-      width: 150,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      width: 140,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -231,10 +216,7 @@ try {
         child: DropdownButton<String>(
           value: selectedMonth,
           isExpanded: true,
-          items:
-              months
-                  .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                  .toList(),
+          items: months.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
           onChanged: (val) {
             if (val != null) {
               setState(() => selectedMonth = val);
@@ -259,52 +241,37 @@ try {
           ),
           child: Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
         if (list.isEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 12),
-            child: Text(
-              "No $title found",
-              style: const TextStyle(color: Colors.white70),
-            ),
+            child: Text("No $title found", style: const TextStyle(color: Colors.white70)),
           )
         else
-          ...list.asMap().entries.map((entry) {
-            final index = entry.key;
-            //final msg = entry.value['message'] as String;
-            //return notificationCard(msg, idx, title);
-            final notif = entry.value; // full notification map
-            return notificationCard(notif,index,title.toLowerCase());
-          }),
+          ...list.asMap().entries.map((entry) => notificationCard(entry.value, entry.key, title.toLowerCase())),
       ],
     );
   }
 
-  //Widget notificationCard(String message, int index, String category) {
-  Widget notificationCard(Map<String, dynamic> notif, int index,String categoryParam) {
-    
-   // final isExpanded = expandedIndex == index;
-   final cardKey = "$categoryParam-$index"; // 🔴 unique key per notification
+  Widget notificationCard(Map<String, dynamic> notif, int index, String categoryParam) {
+    final cardKey = "$categoryParam-$index";
     final isExpanded = expandedKey == cardKey;
-    final message = notif['message'] as String;
+    final messageText = notif['message'] as String;
     final category = (notif['category'] as String).toLowerCase();
-    final senderName = notif['senderName'] ?? 'Unknown'; // 🔴 red: added senderName
-    final senderId = notif['senderId'] ?? ''; // 🔴 red: added senderId
-  if (category.toLowerCase() == "message") {
+    final senderName = notif['senderName'] ?? 'Unknown';
+    final senderId = notif['senderId'] ?? '';
+    final List attachments = (notif['attachments'] as List?) ?? [];
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Material(
         color: Colors.white,
         elevation: 2,
+        borderRadius: BorderRadius.circular(category == "message" ? 0 : 12),
         child: InkWell(
-          onTap:
-              //() => setState(() => expandedIndex = isExpanded ? null : index),
-              () => setState(() => expandedKey = isExpanded ? null : cardKey),
+          onTap: () => setState(() => expandedKey = isExpanded ? null : cardKey),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
@@ -314,137 +281,49 @@ try {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (category == "message") ...[
+                        Text(
+                          "From: $senderName ($senderId)",
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                      ],
                       Text(
-                        "From: $senderName ($senderId)",
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    // 🔹 Second line -> Message
-                    Text(
-                      message,
-                        
-                        
-                        //message,
-                        //"$message\nFrom: $senderName ($senderId)", // 🔴 red: include sender info
+                        messageText,
                         style: const TextStyle(fontSize: 14),
                         maxLines: isExpanded ? null : 1,
-                        overflow:
-                            isExpanded
-                                ? TextOverflow.visible
-                                : TextOverflow.ellipsis,
+                        overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
                       ),
-                      if (isExpanded) const SizedBox(height: 8),
-                      if (isExpanded)
-                         Text(
-                          "Click again to collapse",
-                          //"From: $senderName ($senderId)", // 🔴 red: separate sender info
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
+                      if (isExpanded && attachments.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        ...attachments.map((file) {
+                          final url = "https://hrm-backend-rm6c.onrender.com/${file['path']}";
+                          return InkWell(
+                            onTap: () async {
+                              final uri = Uri.parse(url);
+                              if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.attach_file, size: 18, color: Colors.deepPurple),
+                                  const SizedBox(width: 6),
+                                  Expanded(child: Text(file['originalName'] ?? 'File', style: const TextStyle(color: Colors.deepPurple, decoration: TextDecoration.underline))),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                      if (isExpanded) const Padding(padding: EdgeInsets.only(top: 8), child: Text("Click again to collapse", style: TextStyle(fontSize: 12, color: Colors.grey))),
                     ],
                   ),
                 ),
-                // ✅ Only show "View" for SMS in SMS list
-                // if ((category == "sms" && sms.contains(notif)) ||
-                //   (category == "performance" && performance.contains(notif)))
-                //   TextButton(
-                //     onPressed: () {
-                //       Navigator.push(
-                //         context,
-                //         MaterialPageRoute(
-                //           builder: (c) => ReportsAnalyticsPage(),
-                //         ),
-                //       );
-                //     },
-                //     style: TextButton.styleFrom(
-                //       backgroundColor: Colors.black,
-                //       foregroundColor: Colors.white,
-                //     ),
-                //     child: const Text("View"),
-                //   ),
-/*
-                  if (category.toLowerCase() == "performance")
+                if (category == "performance")
                   TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (c) => ReportsAnalyticsPage(),
-                        ),
-                      );
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text("View"),
-                  ),
-                  */
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-
-// Performance
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.white,
-        elevation: 2,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap:
-              //() => setState(() => expandedIndex = isExpanded ? null : index),
-              () => setState(() => expandedKey = isExpanded ? null : cardKey),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        message,
-                        style: const TextStyle(fontSize: 14),
-                        maxLines: isExpanded ? null : 1,
-                        overflow:
-                            isExpanded
-                                ? TextOverflow.visible
-                                : TextOverflow.ellipsis,
-                      ),
-                      if (isExpanded) const SizedBox(height: 8),
-                      if (isExpanded)
-                        const Text(
-                          "Click again to collapse",
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                    ],
-                  ),
-                ),
-                if (category.toLowerCase() == "performance")
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (c) => ReportsAnalyticsPage(),
-                        ),
-                      );
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                    ),
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => ReportsAnalyticsPage())),
+                    style: TextButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white),
                     child: const Text("View"),
                   ),
               ],
@@ -455,26 +334,5 @@ try {
     );
   }
 
-
-
-  
-
-  Widget _buildHeader() {
-    return Container(
-      height: 60,
-      color: darkBlue,
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: const Text(
-        "",
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
+  Widget _buildHeader() => Container(height: 60, color: darkBlue);
 }
-
-//admin_notification.dart

@@ -320,7 +320,7 @@ class _ApplyLeaveState extends State<ApplyLeave> {
                       ),
                       const SizedBox(height: 5),
                       DropdownButtonFormField<String>(
-                        value: _selectedApproverId,
+                      value: _selectedApproverId,
                         items: _approvers.map((approver) {
                           return DropdownMenuItem<String>(
                             value: approver['employeeId'],

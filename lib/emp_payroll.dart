@@ -1,3 +1,4 @@
+// emp_payroll.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -6,6 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 import 'payslip.dart';
 import 'sidebar.dart';
@@ -50,11 +52,9 @@ class _EmpPayrollState extends State<EmpPayroll> {
     return true; // ✅ all valid months are checked
   }
 
-//   int getDaysInMonth(int year, int month) {
-//   final beginningNextMonth =
-//       (month < 12) ? DateTime(year, month + 1, 1) : DateTime(year + 1, 1, 1);
-//   return beginningNextMonth.subtract(const Duration(days: 1)).day;
-// }
+   int getTotalDaysInMonth(int year, int month) {
+  return DateTime(year, month + 1, 0).day;
+}
 
   static const List<String> months = [
     'January',
@@ -85,38 +85,135 @@ class _EmpPayrollState extends State<EmpPayroll> {
     'nov',
     'dec',
   ];
-Future<int> fetchWorkingDays(String employeeId, int month, int year) async {
-  try {
-    final response = await http.get(
-      Uri.parse("https://hrm-backend-rm6c.onrender.com/attendance/attendance/monthly/$employeeId/$month/$year"),
-    );
+Future<Map<String, double>> fetchMonthlyPayrollSummaryForPdf({
+  required String employeeId,
+  required int monthIndex,
+  required int year,
+  required String monthName,
+}) async {
+  // 1) Attendance month
+  final resAttendance = await http.get(Uri.parse(
+    "https://hrm-backend-rm6c.onrender.com/attendance/attendance/month?year=$year&month=$monthIndex",
+  ));
 
-    if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
+  // 2) Approved leave month
+  final resLeaves = await http.get(Uri.parse(
+    "https://hrm-backend-rm6c.onrender.com/apply/approved/month?year=$year&month=$monthIndex",
+  ));
 
-      // ✅ Count only valid login days for the given month/year
-      final workdays = data.where((item) {
-        if (item['date'] != null &&
-            item['loginTime'] != null &&
-            item['loginTime'].toString().isNotEmpty) {
-          final dateParts = item['date'].split('-'); // dd-MM-yyyy
-          int m = int.parse(dateParts[1]);
-          int y = int.parse(dateParts[2]);
-          return m == month && y == year;
-        }
-        return false;
-      }).length;
+  // 3) Holiday month
+  final resHolidays = await http.get(Uri.parse(
+    "https://hrm-backend-rm6c.onrender.com/notifications/holiday/employee/ADMIN?month=$monthName&year=$year",
+  ));
 
-      return workdays;
-    } else {
-      print("❌ Attendance fetch failed: ${response.statusCode}");
-      return 0;
-    }
-  } catch (e) {
-    print("❌ Attendance error: $e");
-    return 0;
+  List<Map<String, dynamic>> monthlyAttendance = [];
+  List<Map<String, dynamic>> approvedLeaves = [];
+  Set<String> holidayDateKeys = {};
+
+  if (resAttendance.statusCode == 200) {
+    monthlyAttendance =
+        List<Map<String, dynamic>>.from(jsonDecode(resAttendance.body));
   }
+
+  if (resLeaves.statusCode == 200) {
+    approvedLeaves = List<Map<String, dynamic>>.from(jsonDecode(resLeaves.body));
+  }
+
+  if (resHolidays.statusCode == 200) {
+    final List data = jsonDecode(resHolidays.body);
+    holidayDateKeys = data.map<String>((h) {
+      return "${h["day"]}-$monthIndex-${h["year"]}";
+    }).toSet();
+  }
+
+  // Helpers
+  List<DateTime> getDaysInMonth(int year, int month) {
+    final lastDay = DateTime(year, month + 1, 0).day;
+    return List.generate(lastDay, (index) => DateTime(year, month, index + 1));
+  }
+
+  bool isWeekend(DateTime date) =>
+      date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
+
+  bool isHoliday(DateTime date) {
+    final key = "${date.day}-${date.month}-${date.year}";
+    return holidayDateKeys.contains(key);
+  }
+
+  // Attendance Map for employee
+  final attendanceMap = <String, String>{};
+  for (final a in monthlyAttendance) {
+    if (a["employeeId"] == employeeId) {
+      final date = a["date"]; // dd-MM-yyyy
+      final type = a["attendanceType"] ?? "P";
+      attendanceMap[date] = type;
+    }
+  }
+
+  // Leave Set for employee
+  final leaveSet = <String>{};
+  for (final leave in approvedLeaves) {
+    if (leave["employeeId"] != employeeId) continue;
+
+    final fromRaw = DateTime.parse(leave["fromDate"]).toLocal();
+    final toRaw = DateTime.parse(leave["toDate"]).toLocal();
+
+    final from = DateTime(fromRaw.year, fromRaw.month, fromRaw.day);
+    final to = DateTime(toRaw.year, toRaw.month, toRaw.day);
+
+    for (DateTime d = from; !d.isAfter(to); d = d.add(const Duration(days: 1))) {
+      leaveSet.add(DateFormat("dd-MM-yyyy").format(d));
+    }
+  }
+
+  // Calculate
+  final days = getDaysInMonth(year, monthIndex);
+
+  double total = 0;
+  double present = 0;
+  double half = 0;
+  double leave = 0;
+
+  for (final d in days) {
+    if (isWeekend(d)) continue;
+    if (isHoliday(d)) continue;
+
+    total += 1;
+
+    final key = DateFormat("dd-MM-yyyy").format(d);
+
+    if (leaveSet.contains(key)) {
+      leave += 1;
+      continue;
+    }
+
+    final status = attendanceMap[key];
+
+    if (status == "P") {
+      present += 1;
+    } else if (status == "HL") {
+      half += 0.5;
+    }
+  }
+
+  final absent = total - present - half - leave;
+
+  // ✅ Your rule:
+  // LOP = Absent + extra leave above 3
+  const eligibleLeave = 3.0;
+  final extraLeaveLop = (leave - eligibleLeave) > 0 ? (leave - eligibleLeave) : 0.0;
+  final lop = absent + extraLeaveLop;
+
+  return {
+    "totalWorkingDays": total,
+    "presentDays": present,
+    "halfDays": half,
+    "leaveDays": leave,
+    "absentDays": absent,
+    "lopDays": lop,
+  };
 }
+
 
   Future<void> _downloadAllCheckedPayslips() async {
     final employeeId =
@@ -159,20 +256,55 @@ Future<int> fetchWorkingDays(String employeeId, int month, int year) async {
         );
 
         for (final monthKey in selectedMonths) {
-          final monthIndex = monthKeys.indexOf(monthKey);
-          final monthName = months[monthIndex];
+          if (data['months'][monthKey] == null) {
+    print("⚠️ No payslip data for $monthKey");
+    continue;
+  }
+  final monthIndex = monthKeys.indexOf(monthKey);
+  final monthName = months[monthIndex];
 
-        // ✅ Fetch attendance-based working days
-        int attendanceWorkdays = await fetchWorkingDays(
-          employeeId,
-          monthIndex + 1,
-          int.parse(selectedYear!),
-        );
-          final earnings = Map<String, dynamic>.from(
-              data['months'][monthKey]['earnings']);
-          final deductions = Map<String, dynamic>.from(
-              data['months'][monthKey]['deductions']);
+  final totalMonthDays = getTotalDaysInMonth(
+  int.parse(selectedYear!),
+  monthIndex + 1,
+);
 
+
+  // ✅ attendance summary
+  final summary = await fetchMonthlyPayrollSummaryForPdf(
+    employeeId: employeeId,
+    monthIndex: monthIndex + 1,
+    year: int.parse(selectedYear!),
+    monthName: monthName,
+  );
+
+  // final totalWorkdays = summary["totalWorkingDays"] ?? 0;
+  final lopDays = summary["lopDays"] ?? 0;
+
+  // ✅ backend earnings/deductions
+  final earnings =
+      Map<String, dynamic>.from(data['months'][monthKey]['earnings']);
+  final deductions =
+      Map<String, dynamic>.from(data['months'][monthKey]['deductions']);
+
+  // ✅ calculate LOP salary
+  final gross =
+      double.tryParse(earnings['GrossTotalSalary']?.toString() ?? "0") ?? 0;
+  final otherDeduction =
+      double.tryParse(deductions['TotalDeductions']?.toString() ?? "0") ?? 0;
+
+  // double perDaySalary = 0;
+  // if (totalWorkdays > 0) {
+  //   perDaySalary = gross / totalWorkdays;
+  // }
+
+  // final lopAmount = perDaySalary * lopDays;
+  // final netSalary = gross - totalDeductions - lopAmount;
+  final netSalary = gross - otherDeduction;
+
+
+  // ✅ update deductions for pdf printing
+  // deductions['LOP Amount'] = lopAmount.toStringAsFixed(2);
+  deductions['NetSalary'] = netSalary.toStringAsFixed(2);
           pdf.addPage(
     pw.Page(
       pageFormat: PdfPageFormat.a4,
@@ -244,13 +376,15 @@ Future<int> fetchWorkingDays(String employeeId, int month, int year) async {
                       _detailRow('Location', employee['location'], 'UAN',
                           employee['uan']),
                       _detailRow(
-  'No.Of Days Worked',
-  attendanceWorkdays.toString(),
+  // 'No.Of Days Worked',
+  // totalWorkdays.toStringAsFixed(0),
+  'No.Of Days',
+  totalMonthDays.toString(),
   'ESIC No',
   employee['esic_no'],
 ),
-                      _detailRow('PAN', employee['pan'], 'LOP',
-                          employee['lop']),
+                      _detailRow('PAN', employee['pan'], 'LOP Days',
+                          lopDays.toStringAsFixed(1)),
                     ],
                   ),
 

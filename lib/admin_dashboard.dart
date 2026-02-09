@@ -17,6 +17,7 @@ import 'event_banner_slider.dart';
 import 'leave_approval.dart';
 import 'adminperformance.dart'; // ✅ for Performance Review
 import 'package:intl/intl.dart';
+import 'mail.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -385,6 +386,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
               MaterialPageRoute(builder: (_) => const AttendanceLoginPage()),
             );
           }),
+  _quickActionButton('Mail', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MailDashboard()),
+            );
+          }),
+
           _quickActionButton('Notifications Preview', () {
             Navigator.push(
               context,
@@ -421,6 +429,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               MaterialPageRoute(builder: (_) => const CompanyEventsScreen()),
             );
           }),
+          
 
           // ✅ Leave Approval button with badge (fixed)
           SizedBox(

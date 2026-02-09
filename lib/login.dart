@@ -1,3 +1,4 @@
+// login.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -42,13 +43,15 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController employeeIdController = TextEditingController();
   final TextEditingController employeeNameController = TextEditingController();
   final TextEditingController positionController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
   bool isLoading = false;
 
   Future<void> sendLoginDetails() async {
     if (employeeIdController.text.isEmpty ||
         employeeNameController.text.isEmpty ||
-        positionController.text.isEmpty) {
+        positionController.text.isEmpty ||
+        passwordController.text.isEmpty) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -79,6 +82,7 @@ class _LoginPageState extends State<LoginPage> {
           'employeeId': employeeIdController.text.trim(),
           'employeeName': employeeNameController.text.trim(),
           'position': positionController.text.trim(),
+          'password': passwordController.text.trim(),
         }),
       );
 
@@ -286,7 +290,16 @@ class _LoginPageState extends State<LoginPage> {
                                 "Enter_position",
                                 positionController,
                               ),
-                              const SizedBox(height: 30),
+                              // const SizedBox(height: 30)
+                              const SizedBox(height: 16),
+                              // 🔴 Added Password Field
+                              buildPasswordFieldRow(
+                                "Password :",
+                                "Enter_password",
+                                passwordController,
+                              ), // 🔴
+
+                              const SizedBox(height: 24),
 
                               SizedBox(
                                 width: 100,
@@ -373,4 +386,68 @@ class _LoginPageState extends State<LoginPage> {
       ],
     );
   }
+
+  bool _obscurePassword = true;
+  // 🔴 Added new Password Field widget
+  Widget buildPasswordFieldRow(
+    String label,
+    String hint,
+    TextEditingController controller,
+  ) {
+    // 🔴
+    return Row(
+      // 🔴
+      crossAxisAlignment: CrossAxisAlignment.center, // 🔴
+      children: [
+        // 🔴
+        SizedBox(
+          // 🔴
+          width: 130, // 🔴
+          child: Text(
+            // 🔴
+            label, // 🔴
+            style: const TextStyle(
+              // 🔴
+              color: Colors.black, // 🔴
+              fontWeight: FontWeight.w900, // 🔴
+            ), // 🔴
+          ), // 🔴
+        ), // 🔴
+        Expanded(
+          // 🔴
+          child: TextField(
+            // 🔴
+            controller: controller, // 🔴
+            obscureText:
+                _obscurePassword, // 👁️ Use the state variable // 🔴 hide password
+            decoration: InputDecoration(
+              // 🔴
+              filled: true, // 🔴
+              fillColor: const Color.fromRGBO(53, 64, 85, 0.77), // 🔴
+              hintText: hint, // 🔴
+              hintStyle: const TextStyle(
+                // 🔴
+                color: Color.fromARGB(255, 183, 181, 181), // 🔴
+              ), // 🔴
+              border: OutlineInputBorder(
+                // 🔴
+                borderRadius: BorderRadius.circular(10), // 🔴
+              ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                  color: Colors.white, // 👁️ make the icon visible
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              ), // 🔴
+            ), // 🔴
+          ), // 🔴
+        ), // 🔴
+      ], // 🔴
+    ); // 🔴
+  } // 🔴
 }

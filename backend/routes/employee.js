@@ -52,9 +52,9 @@ function getToday() {
 
 // ------------------ Employee Login ------------------ //
 router.post("/employee-login", async (req, res) => {
-  const { employeeId, employeeName, position } = req.body;
+  const { employeeId, employeeName, position,password } = req.body;
 
-  if (!employeeId || !employeeName || !position) {
+  if (!employeeId || !employeeName || !position || !password) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -69,6 +69,12 @@ router.post("/employee-login", async (req, res) => {
     if (!employee) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
+
+    // ✅ Check password match
+    if(employee.password !== password){
+      return res.status(401).json({message:"Invalid password"});
+    }
+
 
     // ✅ Ensure LeaveBalance exists
     await LeaveBalance.updateOne(
@@ -223,9 +229,9 @@ router.get("/employees/:employeeId", async (req, res) => {
 // ✅ Add new employee + optional image
 router.post("/employees", upload.single("employeeImage"), async (req, res) => {
   try {
-    const { employeeId, employeeName, position, domain } = req.body;
+    const { employeeId, employeeName, position, domain ,password } = req.body;
 
-    if (!employeeId || !employeeName || !position || !domain) {
+    if (!employeeId || !employeeName || !position || !domain || !password) {
       return res.status(400).json({ message: "⚠ All fields are required" });
     }
 
@@ -239,6 +245,7 @@ router.post("/employees", upload.single("employeeImage"), async (req, res) => {
       employeeName,
       position,
       domain,
+      password,
       employeeImage: req.file ? `/uploads/${req.file.filename}` : null,
     });
 
@@ -257,9 +264,10 @@ router.post("/employees", upload.single("employeeImage"), async (req, res) => {
 // ✅ Update employee
 router.put("/employees/:id", upload.single("employeeImage"), async (req, res) => {
   try {
-    const { employeeName, position, domain } = req.body;
+    const { employeeName, position, domain  ,password} = req.body;
 
     const updateData = { employeeName, position, domain };
+    if (password) updateData.password = password;
     if (req.file) {
       updateData.employeeImage = `/uploads/${req.file.filename}`;
     }
@@ -272,6 +280,24 @@ router.put("/employees/:id", upload.single("employeeImage"), async (req, res) =>
 
     if (!updated) {
       return res.status(404).json({ message: "Employee not found" });
+    }
+
+
+    // 🟢 Debugging start
+    console.log("🟢 Reached update route for ID:", req.params.id);
+    console.log("🟢 Request body received:", req.body);
+    console.log("🟢 Password value:", req.body.password);
+
+
+    // 🔴 ADD THIS: Sync password to Profile collection if updated
+    if (req.body.password  !== undefined) {
+      const Profile = require('../models/profile');
+      console.log("🔄 Syncing password to profile for ID:", req.params.id);
+      await Profile.findOneAndUpdate(
+        { id: req.params.id },
+        { $set: { password: req.body.password } }
+      );
+      console.log("✅ Password synced successfully to profile collection");
     }
 
     res.json({
@@ -303,6 +329,37 @@ router.delete("/employees/:id", async (req, res) => {
   } catch (err) {
     console.error("❌ Error deleting employee:", err);
     res.status(500).json({ message: "❌ Error deleting employee" });
+  }
+});
+// 🔍 Search employees by partial name
+router.get("/employees/search/:query", async (req, res) => {
+  try {
+    const q = req.params.query;
+
+    const employees = await Employee.find(
+      {
+        employeeName: { $regex: q, $options: "i" }, // case-insensitive search
+      },
+      "employeeId employeeName position employeeImage"
+    );
+
+    res.json(employees);
+  } catch (err) {
+    console.error("❌ Error searching employees:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
+// ✅ Get all unique domains (for dropdowns / filters)
+router.get("/domains", async (req, res) => {
+  try {
+    const domains = await Employee.distinct("domain");
+    res.json(domains);
+  } catch (err) {
+    console.error("❌ Error fetching domains:", err);
+    res.status(500).json({ message: "Server error fetching domains" });
   }
 });
 

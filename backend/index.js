@@ -25,6 +25,18 @@ const requestsRoutes = require('./routes/changeRequests');
 const uploadRoutes = require('./routes/upload');
 const payslipRoutes = require('./routes/payslip');
 const companyEventRoutes = require('./routes/companyEvent');
+const oncampusRoutes = require('./routes/oncampus');
+const inviteTrackerRoutes = require('./routes/inviteTracker');
+const offcampusRoutes = require("./routes/offcampus");
+const offerLetterRoutes = require("./routes/offerletter");
+const exitDetailsRoutes = require('./routes/exitDetailsRoutes');
+const expericenceRoutes = require('./routes/expericence');
+const exitRoutes = require("./routes/exitDetails");
+const exitUploadRoutes = require("./routes/exitUpload"); 
+const revisedOfferLetterRoute = require("./routes/RevisedOfferLetter");
+const mailRoutes= require("./routes/mail");
+const reports = require("./routes/reports");
+const offerLetterBulkRoutes = require("./routes/offerletter_bulk");
 
 // ---------------- EXPRESS APP SETUP ---------------- //
 const app = express();
@@ -51,8 +63,10 @@ app.use(cors({
 
 app.options('*', cors()); // ✅ Handles all OPTIONS requests
 // 🔹 Parsers
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// app.use(express.json());
+// app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 // 🔹 Static uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -71,6 +85,18 @@ app.use('/requests', requestsRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/payslip', payslipRoutes);
 app.use('/company-events', companyEventRoutes);
+app.use('/api/oncampus', oncampusRoutes);
+app.use('/inviteTracker',inviteTrackerRoutes);
+app.use('/api/offcampus', offcampusRoutes);
+app.use("/api/offerletter", offerLetterRoutes);
+app.use('/api', exitDetailsRoutes);
+app.use('/api/expericence', expericenceRoutes);
+app.use("/api/exitDetails", exitRoutes);
+app.use("/api/exitDetails", exitUploadRoutes);
+app.use("/api/revisedofferletter", revisedOfferLetterRoute);
+app.use("/api/mail", mailRoutes);
+app.use("/api", reports);
+app.use("/api/offerletter", offerLetterBulkRoutes);
 
 // ---------------- PAYSLIP APIs ---------------- //
 app.get('/get-payslip-details', async (req, res) => {
@@ -88,19 +114,21 @@ app.get('/get-payslip-details', async (req, res) => {
 
     res.json({
       employee_name: payslip.employee_name,
-      employee_id: payslip.employee_id,
-      date_of_joining: payslip.date_of_joining,
-      no_of_workdays: payslip.no_of_workdays,
-      designation: payslip.designation,
-      bank_name: payslip.bank_name,
-      account_no: payslip.account_no,
-      location: payslip.location,
-      pan: payslip.pan,
-      uan: payslip.uan,
-      esic_no: payslip.esic_no,
-      lop: payslip.lop,
-      earnings: monthData.earnings,
-      deductions: monthData.deductions,
+  employee_id: payslip.employee_id,
+  date_of_joining: payslip.date_of_joining,
+  designation: payslip.designation,
+  bank_name: payslip.bank_name,
+  account_no: payslip.account_no,
+  location: payslip.location,
+  pan: payslip.pan,
+  uan: payslip.uan,
+  esic_no: payslip.esic_no,
+
+  year,
+  month: monthKey,
+
+  earnings: monthData.earnings,
+  deductions: monthData.deductions,
     });
 
   } catch (error) {
@@ -132,17 +160,15 @@ app.post('/get-multiple-payslips', async (req, res) => {
     res.status(200).json({
       employeeInfo: {
         employee_name: payslip.employee_name,
-        employee_id: payslip.employee_id,
-        date_of_joining: payslip.date_of_joining,
-        no_of_workdays: payslip.no_of_workdays,
-        designation: payslip.designation,
-        bank_name: payslip.bank_name,
-        account_no: payslip.account_no,
-        location: payslip.location,
-        pan: payslip.pan,
-        uan: payslip.uan,
-        esic_no: payslip.esic_no,
-        lop: payslip.lop,
+  employee_id: payslip.employee_id,
+  date_of_joining: payslip.date_of_joining,
+  designation: payslip.designation,
+  bank_name: payslip.bank_name,
+  account_no: payslip.account_no,
+  location: payslip.location,
+  pan: payslip.pan,
+  uan: payslip.uan,
+  esic_no: payslip.esic_no,
       },
       months: results,
     });

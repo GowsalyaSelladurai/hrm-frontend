@@ -14,7 +14,8 @@ const employeeSchema = new mongoose.Schema({
   employeeId: { type: String, required: true, unique: true, trim: true }, // unified from both schemas
   employeeName: { type: String, required: true, trim: true }, // from addemployee
   position: { type: String, required: true, trim: true },    // from addemployee
-  domain: { type: String, required: true, trim: true },      // from addemployee
+  domain: { type: String, required: true, trim: true },  
+  password: { type: String, required: true, trim: true },    // Employee login password    // from addemployee
   employeeImage: { type: String, default: null },            // from addemployee
 
   // // 🔹 Additional details from original employee.js

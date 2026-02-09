@@ -7,7 +7,8 @@ const changeRequestSchema = new mongoose.Schema({
   field: { type: String, required: true },         // e.g., "mobile_number", "dob"
   oldValue: { type: String },
   newValue: { type: String, required: true },
-  requestedBy: { type: String },                   // who requested (employee id / name / admin)
+  requestedBy: { type: String },  
+  requestedByName: { type: String },                  // who requested (employee id / name / admin)
   status: { type: String, enum: ['pending','approved','declined'], default: 'pending' },
   createdAt: { type: Date, default: Date.now },
   resolvedAt: { type: Date },

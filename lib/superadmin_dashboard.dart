@@ -19,7 +19,6 @@ import 'apply_leave.dart';
 import 'todo_planner.dart';
 import 'emp_payroll.dart';
 import 'company_events.dart';
-import 'admin_notification.dart';
 import 'attendance_login.dart';
 import 'event_banner_slider.dart';
 import 'leave_approval.dart';
@@ -27,6 +26,11 @@ import 'leave_approval.dart';
 import 'superadmin_performance.dart'; // ✅ for SuperadminPerformancePageReview
 import 'employee_list.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'recruitment.dart';
+import 'mail.dart';
+import 'attendance_list.dart';
+import 'holiday_master_screen.dart';
+import 'superadmin_notification.dart';
 
 class SuperAdminDashboard extends StatefulWidget {
   const SuperAdminDashboard({super.key});
@@ -323,293 +327,374 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     final nameController = TextEditingController();
     final positionController = TextEditingController();
     final domainController = TextEditingController();
+    final passwordController = TextEditingController();
     final imageController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
-        child: Container(
-          width: 420,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF873AB7), Color(0xFF673AB7)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Center(
-            child: Container(
-              margin: const EdgeInsets.all(20),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      "Add New Employee",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
+      barrierDismissible: true,
+      builder: (_) {
+        bool obscure = true;
 
-                    // Image Picker
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: imageController,
-                            readOnly: true,
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              //builder: (_) => Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 40,
+                vertical: 60,
+              ),
+              child: Container(
+                width: 420,
+                height: 520, // 🔴 increased height so button visible
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF873AB7), Color(0xFF673AB7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            "Add New Employee",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          //const SizedBox(height: 18),
+                          const SizedBox(height: 10),
+
+                          // Image Picker
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: imageController,
+                                  readOnly: true,
+                                  decoration: const InputDecoration(
+                                    labelText: "Profile Image (.jpg)",
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
+                              //const SizedBox(width: 10),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  if (kIsWeb) {
+                                    // Web: pick file as bytes
+                                    final result = await FilePicker.platform
+                                        .pickFiles(
+                                          type: FileType.custom,
+                                          allowedExtensions: ['jpg', 'jpeg'],
+                                          withData: true,
+                                        );
+                                    if (result != null &&
+                                        result.files.single.bytes != null) {
+                                      setState(() {
+                                        _pickedImageBytes =
+                                            result.files.single.bytes;
+                                        // lowercase extension to satisfy Multer
+                                        _pickedFileName = result
+                                            .files
+                                            .single
+                                            .name
+                                            .toLowerCase();
+                                        imageController.text = _pickedFileName!;
+                                      });
+                                    }
+                                  } else {
+                                    // Mobile: pick image from gallery
+                                    final picked = await _picker.pickImage(
+                                      source: ImageSource.gallery,
+                                    );
+                                    if (picked != null) {
+                                      final lower = picked.path.toLowerCase();
+                                      if (lower.endsWith('.jpg') ||
+                                          lower.endsWith('.jpeg')) {
+                                        setState(() {
+                                          _pickedImageFile = File(picked.path);
+                                          _pickedFileName = picked.name
+                                              .toLowerCase();
+                                          imageController.text = picked.name;
+                                        });
+                                      } else {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              "⚠ Please select a .jpg image only",
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.deepPurple,
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text("Browse"),
+                              ),
+                            ],
+                          ),
+                          //const SizedBox(height: 16),
+                          const SizedBox(height: 14),
+
+                          // Employee ID
+                          TextField(
+                            controller: idController,
                             decoration: const InputDecoration(
-                              labelText: "Profile Image (.jpg)",
+                              labelText: "Employee ID",
                               border: OutlineInputBorder(),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        ElevatedButton(
-                          onPressed: () async {
-                            if (kIsWeb) {
-                              // Web: pick file as bytes
-                              final result = await FilePicker.platform
-                                  .pickFiles(
-                                    type: FileType.custom,
-                                    allowedExtensions: ['jpg', 'jpeg'],
-                                    withData: true,
-                                  );
-                              if (result != null &&
-                                  result.files.single.bytes != null) {
-                                setState(() {
-                                  _pickedImageBytes = result.files.single.bytes;
-                                  // lowercase extension to satisfy Multer
-                                  _pickedFileName = result.files.single.name
-                                      .toLowerCase();
-                                  imageController.text = _pickedFileName!;
-                                });
-                              }
-                            } else {
-                              // Mobile: pick image from gallery
-                              final picked = await _picker.pickImage(
-                                source: ImageSource.gallery,
-                              );
-                              if (picked != null) {
-                                final lower = picked.path.toLowerCase();
-                                if (lower.endsWith('.jpg') ||
-                                    lower.endsWith('.jpeg')) {
+                          //const SizedBox(height: 12),
+                          const SizedBox(height: 10),
+
+                          // Employee Name
+                          TextField(
+                            controller: nameController,
+                            decoration: const InputDecoration(
+                              labelText: "Employee Name",
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          //const SizedBox(height: 12),
+                          const SizedBox(height: 10),
+
+                          // Position
+                          TextField(
+                            controller: positionController,
+                            decoration: const InputDecoration(
+                              labelText: "Position",
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          //const SizedBox(height: 12),
+                          const SizedBox(height: 10),
+
+                          // Domain
+                          TextField(
+                            controller: domainController,
+                            decoration: const InputDecoration(
+                              labelText: "Domain",
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          //const SizedBox(height: 18),
+                          const SizedBox(height: 10),
+
+                          // Password (new) - obscured with toggle
+                          TextField(
+                            controller: passwordController,
+                            obscureText: obscure,
+                            decoration: InputDecoration(
+                              labelText: "Password",
+                              border: const OutlineInputBorder(),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  obscure
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
+                                ),
+                                onPressed: () {
                                   setState(() {
-                                    _pickedImageFile = File(picked.path);
-                                    _pickedFileName = picked.name.toLowerCase();
-                                    imageController.text = picked.name;
+                                    obscure = !obscure;
                                   });
-                                } else {
+                                },
+                              ),
+                            ),
+                          ),
+                          //const SizedBox(height: 18),
+                          const SizedBox(height: 16),
+
+                          // Submit Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepPurple,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              onPressed: () async {
+                                final empId = idController.text.trim();
+                                final name = nameController.text.trim();
+                                final position = positionController.text.trim();
+                                final domain = domainController.text.trim();
+                                final password = passwordController.text.trim();
+
+                                if (empId.isEmpty ||
+                                    name.isEmpty ||
+                                    position.isEmpty ||
+                                    domain.isEmpty ||
+                                    password.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("⚠ Please fill all fields"),
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                if (password.length < 6) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
-                                        "⚠ Please select a .jpg image only",
+                                        "⚠ Password should be at least 6 characters",
                                       ),
                                     ),
                                   );
+                                  return;
                                 }
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text("Browse"),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
 
-                    // Employee ID
-                    TextField(
-                      controller: idController,
-                      decoration: const InputDecoration(
-                        labelText: "Employee ID",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Employee Name
-                    TextField(
-                      controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: "Employee Name",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Position
-                    TextField(
-                      controller: positionController,
-                      decoration: const InputDecoration(
-                        labelText: "Position",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Domain
-                    TextField(
-                      controller: domainController,
-                      decoration: const InputDecoration(
-                        labelText: "Domain",
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Submit Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () async {
-                          final empId = idController.text.trim();
-                          final name = nameController.text.trim();
-                          final position = positionController.text.trim();
-                          final domain = domainController.text.trim();
-
-                          if (empId.isEmpty ||
-                              name.isEmpty ||
-                              position.isEmpty ||
-                              domain.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("⚠ Please fill all fields"),
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (_pickedImageBytes == null &&
-                              _pickedImageFile == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "⚠ Please select a .jpg file to upload",
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-
-                          try {
-                            var request = http.MultipartRequest(
-                              'POST',
-                              Uri.parse("https://hrm-backend-rm6c.onrender.com/api/employees"),
-                            );
-
-                            request.fields['employeeId'] = empId;
-                            request.fields['employeeName'] = name;
-                            request.fields['position'] = position;
-                            request.fields['domain'] = domain;
-
-                            if (kIsWeb && _pickedImageBytes != null) {
-                              request.files.add(
-                                http.MultipartFile.fromBytes(
-                                  'employeeImage',
-                                  _pickedImageBytes!,
-                                  filename: _pickedFileName ?? 'upload.jpg',
-                                  contentType: MediaType(
-                                    'image',
-                                    'jpeg',
-                                  ), // Multer safe
-                                ),
-                              );
-                            } else if (!kIsWeb && _pickedImageFile != null) {
-                              request.files.add(
-                                await http.MultipartFile.fromPath(
-                                  'employeeImage',
-                                  _pickedImageFile!.path,
-                                  filename:
-                                      _pickedFileName ??
-                                      _pickedImageFile!.path.split('/').last,
-                                ),
-                              );
-                            }
-
-                            final streamedResponse = await request.send();
-                            final response = await http.Response.fromStream(
-                              streamedResponse,
-                            );
-
-                            if (response.statusCode == 200 ||
-                                response.statusCode == 201) {
-                              _clearPickedImage();
-                              imageController.clear();
-                              idController.clear();
-                              nameController.clear();
-                              positionController.clear();
-                              domainController.clear();
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    "✅ Employee added successfully!",
-                                  ),
-                                ),
-                              );
-                              Navigator.pop(context);
-
-                              // Refresh Employee List
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const EmployeeListScreen(),
-                                ),
-                              );
-                            } else {
-                              String msg = "❌ Failed: ${response.statusCode}";
-                              try {
-                                final body = jsonDecode(response.body);
-                                if (body is Map && body['message'] != null) {
-                                  msg = body['message'];
+                                if (_pickedImageBytes == null &&
+                                    _pickedImageFile == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "⚠ Please select a .jpg file to upload",
+                                      ),
+                                    ),
+                                  );
+                                  return;
                                 }
-                              } catch (_) {}
-                              ScaffoldMessenger.of(
-                                context,
-                              ).showSnackBar(SnackBar(content: Text(msg)));
-                            }
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("❌ Error: $e")),
-                            );
-                          }
-                        },
-                        child: const Text(
-                          "Add Employee",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
+
+                                try {
+                                  var request = http.MultipartRequest(
+                                    'POST',
+                                    Uri.parse(
+                                      "https://hrm-backend-rm6c.onrender.com/api/employees",
+                                    ),
+                                  );
+
+                                  request.fields['employeeId'] = empId;
+                                  request.fields['employeeName'] = name;
+                                  request.fields['position'] = position;
+                                  request.fields['domain'] = domain;
+                                  request.fields['password'] =
+                                      password; // <-- new
+
+                                  if (kIsWeb && _pickedImageBytes != null) {
+                                    request.files.add(
+                                      http.MultipartFile.fromBytes(
+                                        'employeeImage',
+                                        _pickedImageBytes!,
+                                        filename:
+                                            _pickedFileName ?? 'upload.jpg',
+                                        contentType: MediaType(
+                                          'image',
+                                          'jpeg',
+                                        ), // Multer safe
+                                      ),
+                                    );
+                                  } else if (!kIsWeb &&
+                                      _pickedImageFile != null) {
+                                    request.files.add(
+                                      await http.MultipartFile.fromPath(
+                                        'employeeImage',
+                                        _pickedImageFile!.path,
+                                        filename:
+                                            _pickedFileName ??
+                                            _pickedImageFile!.path
+                                                .split('/')
+                                                .last,
+                                      ),
+                                    );
+                                  }
+
+                                  final streamedResponse = await request.send();
+                                  final response = await http
+                                      .Response.fromStream(streamedResponse);
+
+                                  if (response.statusCode == 200 ||
+                                      response.statusCode == 201) {
+                                    _clearPickedImage();
+                                    imageController.clear();
+                                    idController.clear();
+                                    nameController.clear();
+                                    positionController.clear();
+                                    domainController.clear();
+                                    passwordController.clear();
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "✅ Employee added successfully!",
+                                        ),
+                                      ),
+                                    );
+                                    Navigator.pop(context);
+
+                                    // Refresh Employee List
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const EmployeeListScreen(),
+                                      ),
+                                    );
+                                  } else {
+                                    String msg =
+                                        "❌ Failed: ${response.statusCode}";
+                                    try {
+                                      final body = jsonDecode(response.body);
+                                      if (body is Map &&
+                                          body['message'] != null) {
+                                        msg = body['message'];
+                                      }
+                                    } catch (_) {}
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(msg)),
+                                    );
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text("❌ Error: $e")),
+                                  );
+                                }
+                              },
+                              child: const Text(
+                                "Add Employee",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        ),
-      ),
+            );
+          },
+        );
+      },
     ).then((_) {
       _clearPickedImage();
       imageController.clear();
@@ -620,17 +705,16 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     });
   }
 
- 
   /// Helper: format date in YYYY-MM-DD hh:mm with zero padding
-String _formatDate(dynamic iso) {
-  if (iso == null) return 'N/A';
-  try {
-    final dt = DateTime.parse(iso.toString()).toLocal();
-    return DateFormat('yyyy-MM-dd hh:mm a').format(dt); // 2025-10-03 12:09 PM
-  } catch (_) {
-    return iso.toString();
+  String _formatDate(dynamic iso) {
+    if (iso == null) return 'N/A';
+    try {
+      final dt = DateTime.parse(iso.toString()).toLocal();
+      return DateFormat('yyyy-MM-dd hh:mm a').format(dt); // 2025-10-03 12:09 PM
+    } catch (_) {
+      return iso.toString();
+    }
   }
-}
 
   /// 🔹 Fetch pending change requests
   Future<List<dynamic>> _fetchPendingRequests() async {
@@ -843,13 +927,11 @@ String _formatDate(dynamic iso) {
         : "employee";
 
     return Center(
-      child: Wrap(  
+      child: Wrap(
         spacing: 90,
         runSpacing: 20,
         alignment: WrapAlignment.center,
         children: [
-
-           
           _quickActionButton('Apply Leave', () {
             Navigator.push(
               context,
@@ -868,11 +950,17 @@ String _formatDate(dynamic iso) {
               MaterialPageRoute(builder: (_) => const AttendanceLoginPage()),
             );
           }),
+          _quickActionButton('Mail', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MailDashboard()),
+            );
+          }),
           _quickActionButton('Notifications Preview', () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => AdminNotificationsPage(
+                builder: (_) => SuperadminNotificationsPage(
                   empId:
                       Provider.of<UserProvider>(
                         context,
@@ -916,6 +1004,24 @@ String _formatDate(dynamic iso) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const EmployeeListScreen()),
+            );
+          }),
+          _quickActionButton('Attendance List', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AttendanceListScreen()),
+            );
+          }),
+          _quickActionButton('Holiday Master', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HolidayMasterScreen()),
+            );
+          }),
+          _quickActionButton('Recruitment', () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const RecruitmentHomePage()),
             );
           }),
 
@@ -968,8 +1074,6 @@ String _formatDate(dynamic iso) {
       ),
     );
   }
-
-  
 
   Widget _quickActionButton(String title, VoidCallback onPressed) {
     return ElevatedButton(

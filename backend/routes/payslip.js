@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 // const Payslip = require("../models/Payslip");
-const Attendance = require("./attendance"); // ✅ importing from your existing file
+const Attendance = require("../models/attendance");
+ // ✅ importing from your existing file
 
 // 🔥 Update no_of_workdays from Attendance collection
 router.put("/update-workdays/:employeeId/:year/:month", async (req, res) => {

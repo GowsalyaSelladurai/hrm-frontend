@@ -1,3 +1,4 @@
+// models/profile.js
 const mongoose = require('mongoose');
 
 // --- Experience Schema ---
@@ -16,6 +17,7 @@ const employeeSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   full_name: { type: String },
   date_of_appointment: { type: String },
+  password: { type: String, required: false, trim: true },
   annual_ctc:{type:String},
   monthly_ctc:{type:String},
   monthly_gross:{type:String},

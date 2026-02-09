@@ -1,3 +1,4 @@
+// routes/profile_route.js
 const express = require('express');
 const router = express.Router();
 const Profile = require('../models/profile');
@@ -56,6 +57,30 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: '❌ Employee not found' });
     }
 
+
+
+    // 🟢 Debug logs
+    console.log("🟢 Profile update request received for ID:", req.params.id);
+    console.log("🟢 Body received:", req.body);
+    console.log("🟢 Password value:", req.body.password);
+
+
+    // 🔴 ADD THIS PART BELOW - to sync password to Employee collection
+    if (req.body.password  !== undefined) {
+      const Employee = require('../models/employee');
+      await Employee.findOneAndUpdate(
+        { employeeId: req.params.id },
+        { $set: { password: req.body.password } }
+      );
+
+      if (result) {
+        console.log("✅ Password synced successfully to Employee collection");
+      } else {
+        console.warn("⚠️ Employee not found in Employee collection during sync");
+      }
+    }
+    
+
     res.status(200).json({ message: '✅ Employee updated', employee: updatedEmployee });
   } catch (error) {
     console.error('❌ Failed to update employee:', error.message);
@@ -75,6 +100,27 @@ router.patch('/:id', async (req, res) => {
 
     if (!updatedEmployee) {
       return res.status(404).json({ message: '❌ Employee not found' });
+    }
+
+
+    // 🟢 Debug logs
+    console.log("🟢 Field update request:", updateData);
+    console.log("🟢 For ID:", req.params.id);
+    console.log("🟢 Password value:", req.body.password);
+
+    // 🔴 ADD THIS PART TOO - sync to Employee collection
+    if (updateData.password !== undefined) {
+      const Employee = require('../models/employee');
+      console.log("🔍 Trying to sync password for:", req.params.id);
+      await Employee.findOneAndUpdate(
+        { employeeId: req.params.id },
+        { $set: { password: updateData.password } }
+      );
+      if (result) {
+        console.log("✅ Password synced successfully to Employee collection");
+      } else {
+        console.warn("⚠️ Employee not found in Employee collection during sync");
+      }
     }
 
     res.status(200).json({ message: '✅ Field updated', employee: updatedEmployee });

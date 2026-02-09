@@ -1,3 +1,4 @@
+// employee_list.dart
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -108,10 +109,14 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
     final nameController = TextEditingController(text: emp["employeeName"]);
     final positionController = TextEditingController(text: emp["position"]);
     final domainController = TextEditingController(text: emp["domain"]);
+    final passwordController = TextEditingController(
+      text: emp['password'] ?? "",
+    );
     final imageController = TextEditingController(
       text: emp["employeeImage"] ?? "",
     );
 
+    bool obscurePassword = true;
     Uint8List? pickedImageBytes; // Web
     File? pickedImageFile; // Mobile
 
@@ -143,6 +148,27 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
                 TextField(
                   controller: domainController,
                   decoration: const InputDecoration(labelText: "Domain"),
+                ),
+                const SizedBox(height: 12),
+
+                // 🔐 Password field (only visible in edit dialog)
+                TextField(
+                  controller: passwordController,
+                  obscureText: obscurePassword,
+                  decoration: InputDecoration(
+                    labelText: "Password",
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off,
+                      ),
+                      //onPressed: () => setStateDialog(() {
+                      onPressed: () => setState(() {
+                        obscurePassword = !obscurePassword;
+                      }),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -243,6 +269,7 @@ class _EmployeeListScreenState extends State<EmployeeListScreen> {
                   request.fields['employeeName'] = nameController.text;
                   request.fields['position'] = positionController.text;
                   request.fields['domain'] = domainController.text;
+                  request.fields['password'] = passwordController.text;
 
                   if (pickedImageBytes != null) {
                     request.files.add(

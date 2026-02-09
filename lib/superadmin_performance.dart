@@ -1,3 +1,4 @@
+//superadmin_performance.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -107,6 +108,8 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
     }
 
     final url = Uri.parse('https://hrm-backend-rm6c.onrender.com/reviews');
+    final now = DateTime.now(); // 🔹 Get current date
+    final int currentYear = now.year; // 🔹 Extract year (e.g., 2026)
     final reviewerName =
         Provider.of<UserProvider>(context, listen: false).employeeName ??
         'Admin';
@@ -146,6 +149,7 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
         // 1️⃣ Employee notification
         final employeeNotif = {
           "month": currentMonth,
+          "year": currentYear, // ✅ ADD THIS LINE
           "category": "performance",
           // "message": "Performance review for $selectedEmpName ($selectedEmpId) - $currentMonth",
           "message": "Performance received from ($adminName) - $currentMonth",
@@ -163,6 +167,7 @@ class _SuperadminPerformancePageState extends State<SuperadminPerformancePage> {
         // 2️⃣ Admin self-copy
         final adminNotif = {
           "month": currentMonth,
+          "year": currentYear, // ✅ ADD THIS LINE
           "category": "performance",
           // "message": "You reviewed $selectedEmpName ($selectedEmpId) - $currentMonth",
           "message": "Performance sent to ($selectedEmpName) - $currentMonth",

@@ -1,6 +1,20 @@
+//backend/routes/attendance.js
 const express = require("express");
 const Attendance = require("../models/attendance");
 const router = express.Router();
+
+
+function timeToMinutes(timeStr) {
+  if (!timeStr) return 0;
+
+  const [time, modifier] = timeStr.split(" ");
+  let [hours, minutes] = time.split(":").map(Number);
+
+  if (modifier === "PM" && hours !== 12) hours += 12;
+  if (modifier === "AM" && hours === 12) hours = 0;
+
+  return hours * 60 + minutes;
+}
 
 // 🔹 Utility: Always return DD-MM-YYYY
 function formatDateToDDMMYYYY(dateInput) {
@@ -60,6 +74,7 @@ router.post("/attendance/mark/:employeeId", async (req, res) => {
       loginReason,
       logoutReason,
       status: status || "Login",
+      attendanceType: "P", // ✅ FIX HERE
     });
 
     await newAttendance.save();
@@ -180,15 +195,63 @@ if (breakStatus === "BreakOff" && todayRecord.breakInProgress) {
 }
 
 
-    // --- ✅ Normal logout update ---
-    if (logoutTime) {
-      todayRecord.logoutTime = logoutTime;
-      todayRecord.status = "Logout";
-      todayRecord.breakInProgress = null;
-    }
+//     // --- ✅ Normal logout update ---
+//     if (logoutTime) {
+//       todayRecord.logoutTime = logoutTime;
+//       todayRecord.status = "Logout";
+//       todayRecord.breakInProgress = null;
+//     }
+
+//     if (loginReason) todayRecord.loginReason = loginReason;
+//     if (logoutReason) todayRecord.logoutReason = logoutReason;
+
+//     await todayRecord.save();
+//     res.json({ message: "✅ Attendance updated", attendance: todayRecord });
+//   } catch (error) {
+//     console.error("❌ Error updating attendance:", error);
+//     res.status(500).json({ message: "Server Error" });
+//   }
+// });
+
+// --- ✅ Normal logout update ---
+//if (logoutTime && todayRecord.loginTime && todayRecord.status !== "Logout") {
+if (logoutTime && todayRecord.loginTime) {
+
+  const loginMinutes = timeToMinutes(todayRecord.loginTime);
+  const logoutMinutes = timeToMinutes(logoutTime);
+
+  let workedMinutes = logoutMinutes - loginMinutes;
+
+  // subtract break minutes
+  let breakMinutes = 0;
+  if (todayRecord.breakTime) {
+    const match = todayRecord.breakTime.match(/Total:\s*(\d+)\s*mins/);
+    if (match) breakMinutes = parseInt(match[1]);
+  }
+
+  workedMinutes = Math.max(workedMinutes - breakMinutes, 0);
+  todayRecord.workingMinutes = workedMinutes;
+
+  // ✅ FINAL ATTENDANCE RULE (P → H after 300 mins)
+  if (workedMinutes >= 480) {
+    todayRecord.attendanceType = "P";
+  } else if (workedMinutes >= 240) {
+    todayRecord.attendanceType = "HL";
+  } else {
+    todayRecord.attendanceType = "A";
+  }
+
+  todayRecord.logoutTime = logoutTime;
+  todayRecord.status = "Logout";
+  todayRecord.breakInProgress = null;
+}
+
+
 
     if (loginReason) todayRecord.loginReason = loginReason;
     if (logoutReason) todayRecord.logoutReason = logoutReason;
+
+    
 
     await todayRecord.save();
     res.json({ message: "✅ Attendance updated", attendance: todayRecord });
@@ -198,24 +261,8 @@ if (breakStatus === "BreakOff" && todayRecord.breakInProgress) {
   }
 });
 
-//  ✅ GET: All attendance for a specific month & year (for payroll/LOP)
-router.get("/attendance/monthly/:employeeId/:month/:year", async (req, res) => {
-  try {
-    const { employeeId, month, year } = req.params;
-    const allRecords = await Attendance.find({ employeeId });
 
-    const filtered = allRecords.filter((record) => {
-      if (!record.date || !record.loginTime) return false;
-      const [day, m, y] = record.date.split("-"); // dd-MM-yyyy
-      return parseInt(m) === parseInt(month) && parseInt(y) === parseInt(year);
-    });
 
-    res.status(200).json(filtered);
-  } catch (error) {
-    console.error("❌ Error fetching monthly attendance:", error);
-    res.status(500).json({ message: "Server Error" });
-  }
-});
 
 // ✅ GET: Last 5 records
 router.get("/attendance/history/:employeeId", async (req, res) => {
@@ -258,5 +305,34 @@ router.get("/attendance/status/:employeeId", async (req, res) => {
   }
 });
 
+
+// ✅ GET: Attendance by month (for Attendance List screen)
+// GET: Attendance by month (FINAL)
+router.get("/attendance/month", async (req, res) => {
+  try {
+    const { year, month } = req.query; // month: 1-12
+    if (!year || !month) {
+      return res.status(400).json({ message: "Year and month required" });
+    }
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    const dateList = Array.from({ length: daysInMonth }, (_, i) => {
+      const d = new Date(year, month - 1, i + 1);
+      return `${String(d.getDate()).padStart(2, "0")}-${String(
+        d.getMonth() + 1
+      ).padStart(2, "0")}-${d.getFullYear()}`;
+    });
+
+    const attendance = await Attendance.find({
+      date: { $in: dateList },
+    });
+
+    res.json(attendance);
+  } catch (err) {
+    console.error("❌ Monthly attendance error:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+});
 
 module.exports = router;
