@@ -63,7 +63,7 @@ app.use(cors({
   credentials: true
 }));
 
-app.options('*', cors()); // ✅ Handles all OPTIONS requests
+// app.options('*', cors()); // ✅ Handles all OPTIONS requests
 // 🔹 Parsers
 // app.use(express.json());
 // app.use(express.urlencoded({ extended: true }));
