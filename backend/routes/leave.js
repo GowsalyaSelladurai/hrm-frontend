@@ -670,10 +670,10 @@ router.get("/approved/month", async (req, res) => {
     });
 
     res.json(leaves.map(l => ({
-      employeeId: l.employeeId,
-      fromDate: l.fromDate,
-      toDate: l.toDate,
-    })));
+  employeeId: l.employeeId,
+  fromDate: formatDateDDMMYYYY(l.fromDate),
+  toDate: formatDateDDMMYYYY(l.toDate),
+})));
   } catch (err) {
     res.status(500).json({ message: "Error fetching approved leaves" });
   }

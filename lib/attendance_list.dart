@@ -182,11 +182,13 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
     for (final leave in approvedLeaves) {
       final empId = leave["employeeId"];
 
-      final fromRaw = DateTime.parse(leave["fromDate"]).toLocal();
-      final toRaw = DateTime.parse(leave["toDate"]).toLocal();
+      // final fromRaw = DateTime.parse(leave["fromDate"]).toLocal();
+      // final toRaw = DateTime.parse(leave["toDate"]).toLocal();
 
-      final from = DateTime(fromRaw.year, fromRaw.month, fromRaw.day);
-      final to = DateTime(toRaw.year, toRaw.month, toRaw.day);
+      // final from = DateTime(fromRaw.year, fromRaw.month, fromRaw.day);
+      // final to = DateTime(toRaw.year, toRaw.month, toRaw.day);
+      final from = DateFormat("dd-MM-yyyy").parse(leave["fromDate"]);
+final to   = DateFormat("dd-MM-yyyy").parse(leave["toDate"]);
 
       map.putIfAbsent(empId, () => <String>{});
 
