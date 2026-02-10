@@ -354,12 +354,13 @@ class _SidebarState extends State<Sidebar> {
               context,
               const CompanyEventsScreen(),
             ),
-            _sidebarTile(
-              Icons.event,
-              'Recruitment',
-              context,
-              const RecruitmentHomePage(),
-            ),
+            if (role == "Founder" || role == "HR")
+              _sidebarTile(
+                Icons.event,
+                'Recruitment',
+                context,
+                const RecruitmentHomePage(),
+              ),
           ],
         ),
       ),
