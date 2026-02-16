@@ -136,7 +136,7 @@ class _LoginPageState extends State<LoginPage> {
           builder: (context) => AlertDialog(
             title: const Text("Invalid Credentials ❌"),
             content: const Text(
-              "Please check your Employee ID, Name, or Position.",
+              "Please check your Employee ID, Name, Position or Password.",
             ),
             actions: [
               TextButton(

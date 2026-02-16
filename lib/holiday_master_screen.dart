@@ -165,7 +165,10 @@ class _HolidayMasterScreenState extends State<HolidayMasterScreen> {
     String category = "holiday";
     String state = "TN";
 
-    DateTime selectedDate = DateTime(selectedYear, 1, 1);
+    DateTimeRange selectedRange = DateTimeRange(
+      start: DateTime(selectedYear, 1, 1),
+      end: DateTime(selectedYear, 1, 1),
+    );
 
     await showDialog(
       context: context,
@@ -218,19 +221,19 @@ class _HolidayMasterScreenState extends State<HolidayMasterScreen> {
 
                     const SizedBox(height: 14),
 
-                    const Text("Date"),
+                    const Text("Date Range"),
                     const SizedBox(height: 6),
                     InkWell(
                       onTap: () async {
-                        final picked = await showDatePicker(
+                        final picked = await showDateRangePicker(
                           context: context,
-                          initialDate: selectedDate,
+                          initialDateRange: selectedRange,
                           firstDate: DateTime(startYear, 1, 1),
                           lastDate: DateTime(endYear, 12, 31),
                         );
 
                         if (picked != null) {
-                          setDialogState(() => selectedDate = picked);
+                          setDialogState(() => selectedRange = picked);
                         }
                       },
                       child: Container(
@@ -241,12 +244,14 @@ class _HolidayMasterScreenState extends State<HolidayMasterScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.calendar_today, size: 18),
+                            const Icon(Icons.date_range, size: 18),
                             const SizedBox(width: 10),
-                            Text(
-                              "${selectedDate.day} "
-                              "${_monthName(selectedDate.month)}, "
-                              "${selectedDate.year}",
+                            Expanded(
+                              child: Text(
+                                "${selectedRange.start.day} ${_monthName(selectedRange.start.month)} "
+                                "- ${selectedRange.end.day} ${_monthName(selectedRange.end.month)}, "
+                                "${selectedRange.end.year}",
+                              ),
                             ),
                           ],
                         ),
@@ -262,19 +267,23 @@ class _HolidayMasterScreenState extends State<HolidayMasterScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    await http.post(
-                      Uri.parse("$baseUrl/holiday"),
-                      headers: {"Content-Type": "application/json"},
-                      body: jsonEncode({
-                        "category": category,
-                        "holidayType": holidayType,
-                        "message": messageCtrl.text.trim(),
-                        "month": _monthName(selectedDate.month),
-                        "day": selectedDate.day,
-                        "year": selectedDate.year,
-                        "state": state,
-                      }),
-                    );
+                    DateTime current = selectedRange.start;
+                    while (!current.isAfter(selectedRange.end)) {
+                      await http.post(
+                        Uri.parse("$baseUrl/holiday"),
+                        headers: {"Content-Type": "application/json"},
+                        body: jsonEncode({
+                          "category": category,
+                          "holidayType": holidayType,
+                          "message": messageCtrl.text.trim(),
+                          "month": _monthName(current.month),
+                          "day": current.day,
+                          "year": current.year,
+                          "state": state,
+                        }),
+                      );
+                      current = current.add(const Duration(days: 1));
+                    }
 
                     Navigator.pop(context);
                     fetchHolidays();
@@ -296,11 +305,10 @@ class _HolidayMasterScreenState extends State<HolidayMasterScreen> {
 
     String holidayType = h["holidayType"];
 
-    DateTime selectedDate = DateTime(
-      h["year"],
-      _monthIndex(h["month"]),
-      h["day"],
-    );
+    DateTime initialDate = DateTime(h["year"], _monthIndex(h["month"]), h["day"]);
+
+    DateTimeRange selectedRange =
+        DateTimeRange(start: initialDate, end: initialDate);
 
     await showDialog(
       context: context,
@@ -356,22 +364,20 @@ class _HolidayMasterScreenState extends State<HolidayMasterScreen> {
 
                     const SizedBox(height: 14),
 
-                    // Date picker
-                    const Text("Date"),
+                    // Date Range Picker
+                    const Text("Date Range"),
                     const SizedBox(height: 6),
                     InkWell(
                       onTap: () async {
-                        final picked = await showDatePicker(
+                        final picked = await showDateRangePicker(
                           context: context,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(selectedYear, 1, 1),
-                          lastDate: DateTime(selectedYear, 12, 31),
+                          initialDateRange: selectedRange,
+                          firstDate: DateTime(startYear, 1, 1),
+                          lastDate: DateTime(endYear, 12, 31),
                         );
 
                         if (picked != null) {
-                          setDialogState(() {
-                            selectedDate = picked;
-                          });
+                          setDialogState(() => selectedRange = picked);
                         }
                       },
                       child: Container(
@@ -385,12 +391,14 @@ class _HolidayMasterScreenState extends State<HolidayMasterScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.calendar_today, size: 18),
+                            const Icon(Icons.date_range, size: 18),
                             const SizedBox(width: 10),
-                            Text(
-                              "${selectedDate.day} "
-                              "${_monthName(selectedDate.month)}, "
-                              "${selectedDate.year}",
+                            Expanded(
+                              child: Text(
+                                "${selectedRange.start.day} ${_monthName(selectedRange.start.month)} "
+                                "- ${selectedRange.end.day} ${_monthName(selectedRange.end.month)}, "
+                                "${selectedRange.end.year}",
+                              ),
                             ),
                           ],
                         ),
@@ -406,19 +414,27 @@ class _HolidayMasterScreenState extends State<HolidayMasterScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    await http.put(
-                      Uri.parse("$baseUrl/holiday/${h["_id"]}"),
-                      headers: {"Content-Type": "application/json"},
-                      body: jsonEncode({
-                        "category": "holiday",
-                        "message": nameCtrl.text.trim(),
-                        "holidayType": holidayType,
-                        "year": selectedDate.year,
-                        "month": _monthName(selectedDate.month),
-                        "day": selectedDate.day,
-                        "state": h["state"] ?? "TN",
-                      }),
-                    );
+                    // 1. Delete old record
+                    await http.delete(Uri.parse("$baseUrl/holiday/${h["_id"]}"));
+
+                    // 2. Create new records for the range
+                    DateTime current = selectedRange.start;
+                    while (!current.isAfter(selectedRange.end)) {
+                      await http.post(
+                        Uri.parse("$baseUrl/holiday"),
+                        headers: {"Content-Type": "application/json"},
+                        body: jsonEncode({
+                          "category": "holiday",
+                          "message": nameCtrl.text.trim(),
+                          "holidayType": holidayType,
+                          "year": current.year,
+                          "month": _monthName(current.month),
+                          "day": current.day,
+                          "state": h["state"] ?? "TN",
+                        }),
+                      );
+                      current = current.add(const Duration(days: 1));
+                    }
 
                     Navigator.pop(context);
                     fetchHolidays();

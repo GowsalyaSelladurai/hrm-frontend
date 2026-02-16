@@ -1,4 +1,4 @@
-//routes/notifications.js ( year filter for holiday and message )
+//routes/notifications.js 
 
 const express = require('express');
 const router = express.Router();
@@ -31,23 +31,25 @@ router.get('/employee/:empId', async (req, res) => {
     const { empId } = req.params;
     const { month, year, category } = req.query; 
 
-    const query = {
-      $or: [{ empId }, { empId: null }, { empId: "" }]
+    // This ensures we find items where the employee is either the subject (empId) 
+    // or the one receiving a message (receiverId)
+    let query = {
+      $or: [
+        { empId: empId },
+        { receiverId: empId }
+      ]
     };
 
+    if (category) query.category = category;
     if (month) query.month = { $regex: new RegExp(`^${month}$`, 'i') };
-    if (year) query.year = Number(year); 
-    if (category) query.category = { $regex: new RegExp(`^${category}$`, 'i') };
+    if (year) query.year = Number(year);
 
     const notifications = await Notification.find(query).sort({ createdAt: -1 });
-
-    if (!notifications.length) {
-      return res.status(404).json({ message: "No notifications found for this employee" });
-    }
-
-    res.json(notifications);
+    
+    // Always return an array, even if empty, so Flutter doesn't crash
+    res.json(notifications || []);
   } catch (err) {
-    console.error("Error fetching notifications:", err);
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -114,28 +116,23 @@ router.get('/holiday/admin/:month', async (req, res) => {
   }
 });
 
-// 1. Performance → Admin view
-// PERFORMANCE: ADMIN VIEW (Reviews they sent OR reviews they received)
-router.get('/performance/admin/:month/:adminId', async (req, res) => {
-    const { month, adminId } = req.params;
-    const { year } = req.query;
+// 1. Performance → Admin view (Optimized)
+router.get('/performance/admin/:adminId', async (req, res) => {
+    const { adminId } = req.params;
+    const { month, year } = req.query;
     try {
         const query = {
-            category: "performance",
-            month: { $regex: new RegExp(`^${month}$`, 'i') },
-            // 🔒 Logic: I am the sender OR I am the target employee
-            $or: [
-                { senderId: adminId }, 
-                { empId: adminId }
-            ]
+          category: "performance",
+          empId: adminId,  // 👈 Only show the copy owned by the Admin
+          // receiverId: { $ne: adminId } // 👈 Ensures it's a 'Sent' record
         };
 
+        if (month) query.month = { $regex: new RegExp(`^${month}$`, 'i') };
         if (year) query.year = Number(year);
 
         const notifications = await Notification.find(query).sort({ createdAt: -1 });
         res.json(notifications || []);
     } catch (err) {
-        console.error('Error fetching admin performance:', err);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -169,19 +166,19 @@ router.get('/performance/employee/:month/:empId', async (req, res) => {
 // ==========================================
 // 3. PERFORMANCE: SUPER ADMIN VIEW (All Reviews)
 // ==========================================
+// ✅ UPDATED SUPERADMIN ROUTE
 router.get('/performance/superadmin/all', async (req, res) => {
-    const { month, year } = req.query; // Passed as ?month=January&year=2026
     try {
-        const query = { category: "performance" };
+        const { month, year } = req.query;
+        let query = { category: "performance" };
 
         if (month) query.month = { $regex: new RegExp(`^${month}$`, 'i') };
         if (year) query.year = Number(year);
 
-        // 🔓 No empId or senderId filter -> Super Admin sees everything
         const notifications = await Notification.find(query).sort({ createdAt: -1 });
-        res.json(notifications || []);
+        res.json(notifications);
     } catch (err) {
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: "Server error" });
     }
 });
 
@@ -309,7 +306,7 @@ router.post('/holiday', async (req, res) => {
 // ✅ Add a new notification
 router.post('/', async (req, res) => {
   try {
-    const { month, year, category, message, empId, senderName, senderId, flag } = req.body;
+    const { month, year, category, message, empId, senderName, senderId, flag , communication, attitude, technicalKnowledge, business, empName, receiverId } = req.body;
     if (!message || !empId || !category) {
       return res.status(400).json({ message: "Required fields missing" });
     }
@@ -319,9 +316,16 @@ router.post('/', async (req, res) => {
       category, 
       message, 
       empId,
+      receiverId: receiverId || "",
       senderName: senderName || "",
       senderId: senderId || "",
-      flag: flag || "" 
+      flag: flag || "" ,
+      // 🔹 Save Performance Specifics
+      communication: communication || "",
+      attitude: attitude || "",
+      technicalKnowledge: technicalKnowledge || "",
+      business: business || "",
+      empName: empName || ""
     });
 
     await newNotification.save();
@@ -337,7 +341,8 @@ router.post('/', async (req, res) => {
 // =======================
 router.post('/with-files', upload.array('attachments'), async (req, res) => {
   try {
-    const { month, year, category, message, empId, senderName, senderId, flag } = req.body;
+    const { month, year, category, message, empId, senderName, senderId, flag ,
+      communication, attitude, technicalKnowledge, business, empName, receiverId} = req.body;
 
     if (!message || !empId || !category) {
       return res.status(400).json({ message: "Required fields missing" });
@@ -357,10 +362,17 @@ router.post('/with-files', upload.array('attachments'), async (req, res) => {
       category,
       message,
       empId,
+      receiverId: receiverId || "",
       senderName: senderName || "",
       senderId: senderId || "",
       flag: flag || "",
-      attachments
+      attachments,
+      // 🔹 Save Performance Specifics
+      communication: communication || "",
+      attitude: attitude || "",
+      technicalKnowledge: technicalKnowledge || "",
+      business: business || "",
+      empName: empName || ""
     });
 
     await newNotification.save();
@@ -374,5 +386,52 @@ router.post('/with-files', upload.array('attachments'), async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// 🔹 Get unread notification count for badge
+router.get('/unread-count/:empId', async (req, res) => {
+  try {
+    const { empId } = req.params;
+
+    const count = await Notification.countDocuments({
+      isRead: false,
+      $or: [
+        { empId: empId },
+        { receiverId: empId },
+        { category: "holiday" } 
+      ]
+    });
+
+    res.json({ count });
+  } catch (err) {
+    console.error("Unread count error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 🔹 Mark all notifications as read for employee
+router.put('/mark-read/:empId', async (req, res) => {
+  try {
+    const { empId } = req.params;
+
+    await Notification.updateMany(
+      {
+        isRead: false,
+        $or: [
+          { empId: empId },
+          { receiverId: empId },
+          { category: "holiday" } 
+        ]
+      },
+      { $set: { isRead: true } }
+    );
+
+    res.json({ message: "Notifications marked as read" });
+  } catch (err) {
+    console.error("Mark read error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 
 module.exports = router;

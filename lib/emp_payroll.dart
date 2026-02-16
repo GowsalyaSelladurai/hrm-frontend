@@ -85,6 +85,17 @@ class _EmpPayrollState extends State<EmpPayroll> {
     'nov',
     'dec',
   ];
+
+  DateTime safeParseDate(String raw) {
+  try {
+    // Try ISO first
+    return DateTime.parse(raw);
+  } catch (_) {
+    // Fallback to dd-MM-yyyy
+    return DateFormat('dd-MM-yyyy').parse(raw);
+  }
+}
+
 Future<Map<String, double>> fetchMonthlyPayrollSummaryForPdf({
   required String employeeId,
   required int monthIndex,
@@ -155,8 +166,11 @@ Future<Map<String, double>> fetchMonthlyPayrollSummaryForPdf({
   for (final leave in approvedLeaves) {
     if (leave["employeeId"] != employeeId) continue;
 
-    final fromRaw = DateTime.parse(leave["fromDate"]).toLocal();
-    final toRaw = DateTime.parse(leave["toDate"]).toLocal();
+    // final fromRaw = DateTime.parse(leave["fromDate"]).toLocal();
+    // final toRaw = DateTime.parse(leave["toDate"]).toLocal();
+    final fromRaw = safeParseDate(leave["fromDate"]).toLocal();
+final toRaw   = safeParseDate(leave["toDate"]).toLocal();
+
 
     final from = DateTime(fromRaw.year, fromRaw.month, fromRaw.day);
     final to = DateTime(toRaw.year, toRaw.month, toRaw.day);
@@ -277,7 +291,7 @@ Future<Map<String, double>> fetchMonthlyPayrollSummaryForPdf({
     monthName: monthName,
   );
 
-  // final totalWorkdays = summary["totalWorkingDays"] ?? 0;
+  final totalWorkdays = summary["totalWorkingDays"] ?? 0;
   final lopDays = summary["lopDays"] ?? 0;
 
   // ✅ backend earnings/deductions
@@ -292,19 +306,29 @@ Future<Map<String, double>> fetchMonthlyPayrollSummaryForPdf({
   final otherDeduction =
       double.tryParse(deductions['TotalDeductions']?.toString() ?? "0") ?? 0;
 
-  // double perDaySalary = 0;
-  // if (totalWorkdays > 0) {
-  //   perDaySalary = gross / totalWorkdays;
-  // }
+  double perDaySalary = 0;
+  if (totalWorkdays > 0) {
+    perDaySalary = gross / totalWorkdays;
+  }
 
-  // final lopAmount = perDaySalary * lopDays;
-  // final netSalary = gross - totalDeductions - lopAmount;
-  final netSalary = gross - otherDeduction;
+  final lopAmount = perDaySalary * lopDays;
+  final netSalary = gross - otherDeduction - lopAmount;
+  // final netSalary = gross - otherDeduction;
 
 
   // ✅ update deductions for pdf printing
-  // deductions['LOP Amount'] = lopAmount.toStringAsFixed(2);
+  deductions['LOP Amount'] = lopAmount.toStringAsFixed(2);
   deductions['NetSalary'] = netSalary.toStringAsFixed(2);
+
+  String formattedDoj = employee['date_of_joining'];
+
+if (formattedDoj.contains('-')) {
+  try {
+    final d = safeParseDate(formattedDoj);
+    formattedDoj = DateFormat('dd-MM-yyyy').format(d);
+  } catch (_) {}
+}
+
           pdf.addPage(
     pw.Page(
       pageFormat: PdfPageFormat.a4,
@@ -366,11 +390,13 @@ Future<Map<String, double>> fetchMonthlyPayrollSummaryForPdf({
                     border:
                         pw.TableBorder.all(width: 1, color: PdfColors.grey),
                     children: [
+                      
                       _detailRow('Employee Name', employee['employee_name'],
                           'Employee ID', employee['employee_id']),
-                      _detailRow('Date of Joining',
-                          employee['date_of_joining'], 'Bank Name',
-                          employee['bank_name']),
+                      // _detailRow('Date of Joining',
+                      //     employee['date_of_joining'], 'Bank Name',
+                      //     employee['bank_name']),
+                      _detailRow('Date of Joining', formattedDoj, 'Bank Name', employee['bank_name']),
                       _detailRow('Designation', employee['designation'],
                           'Account No', employee['account_no']),
                       _detailRow('Location', employee['location'], 'UAN',
@@ -544,7 +570,7 @@ Future<Map<String, double>> fetchMonthlyPayrollSummaryForPdf({
                         const Icon(Icons.arrow_drop_down, color: Colors.white),
                     style: const TextStyle(color: Colors.white),
                     items: [
-                      for (int year = 2020;
+                      for (int year = 2025;
                           year <= DateTime.now().year;
                           year++)
                         DropdownMenuItem(

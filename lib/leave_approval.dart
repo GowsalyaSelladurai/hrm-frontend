@@ -70,7 +70,7 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage> {
     // 🔴 TL → ONLY their domain in dropdown
     if (role == "TL" && domain != null && domain.isNotEmpty) {
       setState(() {
-        domains = [domain];      // 👈 ONLY ONE DOMAIN
+        domains = [domain]; // 👈 ONLY ONE DOMAIN
         selectedDomain = domain;
       });
       applyFilter();
@@ -201,13 +201,28 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage> {
                       position: const RelativeRect.fromLTRB(1000, 80, 20, 0),
                       items: const [
                         PopupMenuItem(value: "Pending", child: Text("Pending")),
-                        PopupMenuItem(value: "Approved", child: Text("Approved")),
-                        PopupMenuItem(value: "Rejected", child: Text("Rejected")),
+                        PopupMenuItem(
+                          value: "Approved",
+                          child: Text("Approved"),
+                        ),
+                        PopupMenuItem(
+                          value: "Rejected",
+                          child: Text("Rejected"),
+                        ),
                         PopupMenuItem(value: "All", child: Text("All History")),
                         PopupMenuDivider(),
-                        PopupMenuItem(value: "Last 7 Days", child: Text("Last 7 Days")),
-                        PopupMenuItem(value: "Last 30 Days", child: Text("Last 30 Days")),
-                        PopupMenuItem(value: "Custom Range", child: Text("Custom Range")),
+                        PopupMenuItem(
+                          value: "Last 7 Days",
+                          child: Text("Last 7 Days"),
+                        ),
+                        PopupMenuItem(
+                          value: "Last 30 Days",
+                          child: Text("Last 30 Days"),
+                        ),
+                        PopupMenuItem(
+                          value: "Custom Range",
+                          child: Text("Custom Range"),
+                        ),
                       ],
                     );
 
@@ -237,7 +252,9 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage> {
                     final val = await showMenu<String>(
                       context: context,
                       position: const RelativeRect.fromLTRB(1000, 80, 20, 0),
-                      items: domains.map((d) => PopupMenuItem(value: d, child: Text(d))).toList(),
+                      items: domains
+                          .map((d) => PopupMenuItem(value: d, child: Text(d)))
+                          .toList(),
                     );
                     if (val != null) {
                       setState(() {
@@ -249,18 +266,25 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepPurple, // same as filter button
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.domain_outlined, size: 18), // optional icon
+                      const Icon(
+                        Icons.domain_outlined,
+                        size: 18,
+                      ), // optional icon
                       const SizedBox(width: 6),
                       Text(selectedDomain),
                     ],
                   ),
                 ),
-
               ],
             ),
           ),
@@ -274,17 +298,17 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage> {
                 valueListenable: filteredLeavesNotifier,
                 builder: (context, currentFilteredLeaves, child) {
                   if (currentFilteredLeaves.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          "No data found for this filter",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
+                    return const Center(
+                      child: Text(
+                        "No data found for this filter",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
-                      );
-                    }
+                      ),
+                    );
+                  }
                   return ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -297,57 +321,132 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage> {
                       return Card(
                         elevation: 3,
                         margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(leave['employeeName'], style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                                  Text(
+                                    leave['employeeName'],
+                                    style: const TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                   _buildStatusBadge(leave['status']),
                                 ],
                               ),
                               const Divider(),
                               Text("Leave Type: ${leave['leaveType']}"),
                               const SizedBox(height: 4),
-                              Text("Dates: ${leave['fromDate']} to ${leave['toDate']}"),
-                              const SizedBox(height: 6),
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    expanded ? _expandedReasons.remove(leaveId) : _expandedReasons.add(leaveId);
-                                  });
-                                },
-                                child: Text(
-                                  leave['reason'] ?? 'N/A',
-                                  maxLines: expanded ? null : 2,
-                                  overflow: expanded ? TextOverflow.visible : TextOverflow.ellipsis,
-                                  style: TextStyle(color: Colors.grey[700], fontSize: 13),
-                                ),
+                              Text(
+                                "Dates: ${leave['fromDate']} to ${leave['toDate']}",
                               ),
+                              const SizedBox(height: 6),
+
+                              Builder(
+                                builder: (context) {
+                                  final String reasonText =
+                                      leave['reason'] ?? 'N/A';
+                                  // We use 90 characters as a safe estimate for 2 lines on most mobile screens
+                                  final bool isLong = reasonText.length > 90;
+
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        reasonText,
+                                        maxLines: expanded ? null : 2,
+                                        overflow: expanded
+                                            ? TextOverflow.visible
+                                            : TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      if (isLong)
+                                        GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              if (expanded) {
+                                                _expandedReasons.remove(
+                                                  leaveId,
+                                                );
+                                              } else {
+                                                _expandedReasons.add(leaveId);
+                                              }
+                                            });
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 4,
+                                            ),
+                                            child: Text(
+                                              expanded
+                                                  ? "Show Less"
+                                                  : "Show More",
+                                              style: const TextStyle(
+                                                color: Colors.deepPurple,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
+
                               if (leave['status'] == "Pending") ...[
                                 const SizedBox(height: 12),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
                                     TextButton.icon(
-                                      onPressed: () => updateStatus(leave['_id'], "Rejected"),
-                                      icon: const Icon(Icons.close, color: Colors.red, size: 20),
-                                      label: const Text("Reject", style: TextStyle(color: Colors.red)),
+                                      onPressed: () => updateStatus(
+                                        leave['_id'],
+                                        "Rejected",
+                                      ),
+                                      icon: const Icon(
+                                        Icons.close,
+                                        color: Colors.red,
+                                        size: 20,
+                                      ),
+                                      label: const Text(
+                                        "Reject",
+                                        style: TextStyle(color: Colors.red),
+                                      ),
                                     ),
                                     const SizedBox(width: 8),
                                     ElevatedButton.icon(
-                                      onPressed: () => updateStatus(leave['_id'], "Approved"),
-                                      icon: const Icon(Icons.check, color: Colors.white, size: 20),
+                                      onPressed: () => updateStatus(
+                                        leave['_id'],
+                                        "Approved",
+                                      ),
+                                      icon: const Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                                       label: const Text("Approve"),
-                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.green,
+                                        foregroundColor: Colors.white,
+                                      ),
                                     ),
                                   ],
                                 ),
-                              ]
+                              ],
                             ],
                           ),
                         ),
@@ -375,7 +474,14 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color),
       ),
-      child: Text(status, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+      child: Text(
+        status,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 
@@ -400,12 +506,20 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage> {
           builder: (context, setModalState) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Select Custom Date Range", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                "Select Custom Date Range",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 16),
               TextField(
                 readOnly: true,
-                decoration: const InputDecoration(labelText: "From Date", suffixIcon: Icon(Icons.calendar_today)),
-                controller: TextEditingController(text: _formatter.format(tempFrom)),
+                decoration: const InputDecoration(
+                  labelText: "From Date",
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                controller: TextEditingController(
+                  text: _formatter.format(tempFrom),
+                ),
                 onTap: () async {
                   final p = await showDatePicker(
                     context: context,
@@ -419,8 +533,13 @@ class _LeaveApprovalPageState extends State<LeaveApprovalPage> {
               const SizedBox(height: 12),
               TextField(
                 readOnly: true,
-                decoration: const InputDecoration(labelText: "To Date", suffixIcon: Icon(Icons.calendar_today)),
-                controller: TextEditingController(text: _formatter.format(tempTo)),
+                decoration: const InputDecoration(
+                  labelText: "To Date",
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                controller: TextEditingController(
+                  text: _formatter.format(tempTo),
+                ),
                 onTap: () async {
                   final p = await showDatePicker(
                     context: context,

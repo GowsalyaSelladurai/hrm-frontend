@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const express = require("express");
 const router = express.Router();
 
-const Leave = require("../models/leave");
+const Leave = require("../models/Leave");
 const LeaveBalance = require("../models/leaveBalance");
 const Employee = require("../models/employee");
 
@@ -669,11 +669,17 @@ router.get("/approved/month", async (req, res) => {
       toDate: { $gte: start },
     });
 
+    // res.json(leaves.map(l => ({
+    //   employeeId: l.employeeId,
+    //   fromDate: l.fromDate,
+    //   toDate: l.toDate,
+    // })));
     res.json(leaves.map(l => ({
   employeeId: l.employeeId,
   fromDate: formatDateDDMMYYYY(l.fromDate),
   toDate: formatDateDDMMYYYY(l.toDate),
 })));
+
   } catch (err) {
     res.status(500).json({ message: "Error fetching approved leaves" });
   }

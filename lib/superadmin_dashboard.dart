@@ -1,5 +1,3 @@
-//super admindashboard.dart
-
 // lib/super_admin_dashboard.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +17,7 @@ import 'apply_leave.dart';
 import 'todo_planner.dart';
 import 'emp_payroll.dart';
 import 'company_events.dart';
+// import 'admin_notification.dart';
 import 'attendance_login.dart';
 import 'event_banner_slider.dart';
 import 'leave_approval.dart';
@@ -27,7 +26,7 @@ import 'superadmin_performance.dart'; // ✅ for SuperadminPerformancePageReview
 import 'employee_list.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'recruitment.dart';
-import 'mail.dart';
+import 'mail_dashboard.dart';
 import 'attendance_list.dart';
 import 'holiday_master_screen.dart';
 import 'superadmin_notification.dart';
@@ -50,6 +49,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   int sickTotal = 0;
   int sadUsed = 0;
   int sadTotal = 0;
+  int _mailCount = 0;
 
   // For mobile (File)
   File? _pickedImageFile;
@@ -65,14 +65,37 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     super.initState();
     // fetchEmployeeName depends on Provider; call in initState but safe (we check for null inside).
     fetchEmployeeName();
+    _fetchMailCount();
+    _fetchNotificationCount();
     // remove duplicate fetchPendingCount call — UI uses FutureBuilder to fetch it.
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _fetchMailCount();
     // Refresh balances when dashboard is revisited
     _fetchLeaveBalance();
+    _fetchNotificationCount();
+  }
+
+  int _notificationCount = 0; // ✅ New state variable
+
+  Future<void> _fetchNotificationCount() async {
+    final employeeId = Provider.of<UserProvider>(
+      context,
+      listen: false,
+    ).employeeId;
+    if (employeeId == null) return;
+
+    final res = await http.get(
+      Uri.parse("https://hrm-backend-rm6c.onrender.com/notifications/unread-count/$employeeId"),
+    );
+
+    if (res.statusCode == 200 && mounted) {
+      final data = jsonDecode(res.body);
+      setState(() => _notificationCount = data["count"] ?? 0);
+    }
   }
 
   /// Fetch employee name from backend.
@@ -178,6 +201,58 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     } catch (e) {
       debugPrint("❌ Error fetching pending count: $e");
       return 0;
+    }
+  }
+
+  /// Fetch pending change-request count for the current approverRole
+  Future<int> fetchRequestPendingCount(String approverRole) async {
+    try {
+      final uri = Uri.parse(
+        "https://hrm-backend-rm6c.onrender.com/requests/count?approverRole=$approverRole&status=pending",
+      );
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['pendingCount'] ?? 0;
+      } else {
+        debugPrint(
+          "❌ Failed to fetch request pending count: ${response.statusCode}",
+        );
+        return 0;
+      }
+    } catch (e) {
+      debugPrint("❌ Error fetching request pending count: $e");
+      return 0;
+    }
+  }
+
+  Future<void> _fetchMailCount() async {
+    final employeeId = Provider.of<UserProvider>(
+      context,
+      listen: false,
+    ).employeeId;
+    if (employeeId == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'https://hrm-backend-rm6c.onrender.com/api/mail/pending-count?employeeId=$employeeId',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            _mailCount = data['pendingCount'] ?? 0;
+          });
+        }
+      } else {
+        print('❌ Failed to fetch mail count: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Error fetching mail count: $e');
     }
   }
 
@@ -717,10 +792,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   }
 
   /// 🔹 Fetch pending change requests
-  Future<List<dynamic>> _fetchPendingRequests() async {
+  /// 🔹 Fetch pending change requests (optionally filtered by approverRole)
+  Future<List<dynamic>> _fetchPendingRequests({String? approverRole}) async {
     try {
+      String url = "https://hrm-backend-rm6c.onrender.com/requests?status=pending";
+      if (approverRole != null && approverRole.isNotEmpty) {
+        url += "&approverRole=$approverRole";
+      }
       final response = await http.get(
-        Uri.parse("https://hrm-backend-rm6c.onrender.com/requests?status=pending"),
+        Uri.parse(url),
         headers: {"Accept": "application/json"},
       );
       if (response.statusCode == 200) {
@@ -783,7 +863,17 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   }
 
   Future<void> _showChangeRequests() async {
-    final requests = await _fetchPendingRequests();
+    final role =
+        Provider.of<UserProvider>(
+          context,
+          listen: false,
+        ).position?.toLowerCase() ??
+        'founder';
+    // map UI roles to our backend approverRole values
+    final approverRole = (role == 'hr')
+        ? 'hr'
+        : (role == 'founder' ? 'founder' : 'hr');
+    final requests = await _fetchPendingRequests(approverRole: approverRole);
 
     showDialog(
       context: context,
@@ -950,27 +1040,81 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               MaterialPageRoute(builder: (_) => const AttendanceLoginPage()),
             );
           }),
-          _quickActionButton('Mail', () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MailDashboard()),
-            );
-          }),
-          _quickActionButton('Notifications Preview', () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => SuperadminNotificationsPage(
-                  empId:
-                      Provider.of<UserProvider>(
-                        context,
-                        listen: false,
-                      ).employeeId ??
-                      '',
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _quickActionButton('Mail', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MailDashboard()),
+                ).then((_) => _fetchMailCount());
+              }),
+              if (_mailCount > 0)
+                Positioned(
+                  right: -10,
+                  top: -10,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$_mailCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            );
-          }),
+            ],
+          ),
+          // ✅ Notifications Preview with Badge logic
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _quickActionButton('Notifications Preview', () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SuperadminNotificationsPage(
+                      empId:
+                          Provider.of<UserProvider>(
+                            context,
+                            listen: false,
+                          ).employeeId ??
+                          '',
+                    ),
+                  ),
+                ).then((_) {
+                  // This triggers when you come BACK to the dashboard
+                  _fetchNotificationCount();
+                });
+              }),
+              if (_notificationCount > 0)
+                Positioned(
+                  right: -8,
+                  top: -8,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$_notificationCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           _quickActionButton('Performance Review', () {
             final userProvider = Provider.of<UserProvider>(
               context,
@@ -986,7 +1130,49 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             );
           }),
           _quickActionButton('Employee Feedback', _showEmployeeComments),
-          _quickActionButton('Request', _showChangeRequests),
+
+          //_quickActionButton('Request', _showChangeRequests),
+          // 🔹 Request Button with Badge
+          FutureBuilder<int>(
+            future: fetchRequestPendingCount(
+              (Provider.of<UserProvider>(context, listen: false).position ??
+                      'founder')
+                  .toLowerCase(),
+            ),
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  _quickActionButton('Request', () {
+                    _showChangeRequests();
+                  }),
+                  if (count > 0)
+                    Positioned(
+                      right: -10,
+                      top: -10,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          "$count",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+
           _quickActionButton('Company Events', () async {
             final prefs = await SharedPreferences.getInstance();
             final position = prefs.getString('position') ?? '';

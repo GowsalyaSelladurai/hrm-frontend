@@ -6,7 +6,7 @@ const path = require("path");
 const fs = require("fs");
 
 // legacy Mail model (you may remove after migration)
-
+// const Mail = require("../models/mail");
 const Draft = require("../models/draft");
 
 // new thread model + employee
@@ -147,6 +147,8 @@ router.post("/send", upload.array("attachments", 10), async (req, res) => {
       thread.messages.push(message);
       thread.lastUpdated = new Date();
       thread.lastMessagePreview = body ? String(body).slice(0, 200) : "";
+      //for loop reply count
+      thread.readBy = [sender.employeeId];
 
       // add participants (unique) from sender, to, cc, bcc
       const newParticipants = [
@@ -317,24 +319,64 @@ router.delete("/delete-permanent/:threadId/:employeeId", async (req, res) => {
     const thread = await MailThread.findById(threadId);
     if (!thread) return res.status(404).json({ message: "Thread not found" });
 
+    // User must have trashed it first
     if (!Array.isArray(thread.trashedBy) || !thread.trashedBy.includes(employeeId)) {
       return res.status(403).json({ message: "Not allowed - thread not trashed by you" });
     }
 
-    // Require all participants to have trashed the thread before permanent delete
-    const participantCount = (thread.participants || []).length;
-    const trashedCount = (thread.trashedBy || []).length;
-    if (trashedCount < participantCount) {
-      return res.status(403).json({ message: "Others still have this thread" });
+    // 🔥 Remove this user completely from thread
+    thread.participants = (thread.participants || []).filter(
+      (id) => String(id) !== String(employeeId)
+    );
+
+    thread.trashedBy = (thread.trashedBy || []).filter(
+      (id) => String(id) !== String(employeeId)
+    );
+
+    thread.readBy = (thread.readBy || []).filter(
+      (id) => String(id) !== String(employeeId)
+    );
+
+    // If no participants left → delete thread from DB
+    if (!thread.participants || thread.participants.length === 0) {
+      await MailThread.findByIdAndDelete(threadId);
+      return res.json({ message: "Thread fully deleted (no participants left)" });
     }
 
-    await MailThread.findByIdAndDelete(threadId);
-    res.json({ message: "Thread permanently deleted" });
+    await thread.save();
+
+    res.json({ message: "Thread deleted for this user only" });
+
   } catch (err) {
     console.error("Delete permanent error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// router.delete("/delete-permanent/:threadId/:employeeId", async (req, res) => {
+//   try {
+//     const { threadId, employeeId } = req.params;
+//     const thread = await MailThread.findById(threadId);
+//     if (!thread) return res.status(404).json({ message: "Thread not found" });
+
+//     if (!Array.isArray(thread.trashedBy) || !thread.trashedBy.includes(employeeId)) {
+//       return res.status(403).json({ message: "Not allowed - thread not trashed by you" });
+//     }
+
+//     // Require all participants to have trashed the thread before permanent delete
+//     const participantCount = (thread.participants || []).length;
+//     const trashedCount = (thread.trashedBy || []).length;
+//     if (trashedCount < participantCount) {
+//       return res.status(403).json({ message: "Others still have this thread" });
+//     }
+
+//     await MailThread.findByIdAndDelete(threadId);
+//     res.json({ message: "Thread permanently deleted" });
+//   } catch (err) {
+//     console.error("Delete permanent error:", err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// });
 
 /**
  * GET /trash/:employeeId
@@ -499,5 +541,81 @@ router.delete("/draft/:draftId/:employeeId", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+/**
+ * GET /pending-count
+ * Get unread inbox thread count for dashboard badge (Consistent with Leave)
+ */
+router.get("/pending-count", async (req, res) => {
+  try {
+    const employeeId = req.query.employeeId;
+    if (!employeeId) return res.status(400).json({ message: "employeeId required" });
+
+    const threads = await MailThread.find({
+      participants: employeeId,
+      readBy: { $ne: employeeId },     // not read
+      trashedBy: { $ne: employeeId },  // not trashed
+    }).lean();
+
+    // Filter threads that contain at least one message
+    // from someone other than current employee
+    const unreadThreads = threads.filter(thread => {
+      if (!Array.isArray(thread.messages)) return false;
+
+      return thread.messages.some(m => {
+        const fromId =
+          typeof m.from === "string"
+            ? m.from
+            : m.from?.employeeId;
+
+        return String(fromId) !== String(employeeId);
+      });
+    });
+
+    res.json({ pendingCount: unreadThreads.length });
+
+  } catch (err) {
+    console.error("Pending count error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+/**
+ * GET /unread-count/:employeeId
+ * Get unread inbox thread count for dashboard badge
+ */
+router.get("/unread-count/:employeeId", async (req, res) => {
+  try {
+    const employeeId = req.params.employeeId;
+
+    const threads = await MailThread.find({
+      participants: employeeId,
+      readBy: { $ne: employeeId },     // not read
+      trashedBy: { $ne: employeeId },  // not trashed
+    }).lean();
+
+    // Filter threads that contain at least one message
+    // from someone other than current employee
+    const unreadThreads = threads.filter(thread => {
+      if (!Array.isArray(thread.messages)) return false;
+
+      return thread.messages.some(m => {
+        const fromId =
+          typeof m.from === "string"
+            ? m.from
+            : m.from?.employeeId;
+
+        return String(fromId) !== String(employeeId);
+      });
+    });
+
+    res.json({ unreadCount: unreadThreads.length });
+
+  } catch (err) {
+    console.error("Unread count error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 module.exports = router;

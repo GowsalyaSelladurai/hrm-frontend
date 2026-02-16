@@ -64,11 +64,16 @@ const notificationSchema = new mongoose.Schema({
       return this.category === "message" || this.category === "performance";
     }
   },
-
+  receiverId: { type: String, default: "" },
+  reviewId: { type: String, default: "" },
   senderId: { type: String, default: "" },
   senderName: { type: String, default: "" },
   flag: { type: String, default: "" },
-
+  communication: { type: String, default: "" },
+  attitude: { type: String, default: "" }, 
+  technicalKnowledge: { type: String, default: "" },
+  business: { type: String, default: "" },
+  empName: { type: String, default: "" },
   // ✅ Attachments
   attachments: [
     {
@@ -79,6 +84,13 @@ const notificationSchema = new mongoose.Schema({
       size: Number
     }
   ],
+
+  // ✅ Read tracking for badge
+  isRead: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
 
   createdAt: { type: Date, default: Date.now }
 

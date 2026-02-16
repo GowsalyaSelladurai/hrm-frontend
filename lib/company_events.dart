@@ -1,5 +1,4 @@
 //company_events.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -36,7 +35,7 @@ class CompanyEvent {
         specialGuest: json['specialGuest'],
         description: json['description'],
         bannerUrl: json['bannerUrl'],
-        dateTime: DateTime.parse(json['dateTime']).toLocal(),
+        dateTime: DateTime.parse(json['dateTime']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -47,7 +46,8 @@ class CompanyEvent {
         'specialGuest': specialGuest,
         'description': description,
         'bannerUrl': bannerUrl,
-        'dateTime': dateTime.toIso8601String(),
+        'dateTime': dateTime.toUtc().toIso8601String(),
+
       };
 }
 
@@ -287,7 +287,7 @@ class _CompanyEventsScreenState extends State<CompanyEventsScreen> {
                                 title: event.title,
                                 description: event.description ?? '',
                                 company: event.company,
-                                time: _dateFormat.format(event.dateTime),
+                                time: _dateFormat.format(event.dateTime.toLocal()),
                                 onDelete: widget.isHR
                                     ? () async {
                                         final confirm = await showDialog(

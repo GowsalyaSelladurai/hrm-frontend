@@ -1,8 +1,10 @@
-// employeenotification.dart( year dropdrown)
+// employeenotification.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart';
+import 'dart:typed_data'; // Required for Uint8List
+import 'package:file_saver/file_saver.dart'; // For saving to device
+// For mobile paths
 
 import 'reports.dart';
 import 'sidebar.dart';
@@ -27,10 +29,20 @@ class _EmployeeNotificationsPageState extends State<EmployeeNotificationsPage> {
   String? expandedKey;
 
   final List<String> months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
-  
+
   List<Map<String, dynamic>> message = [];
   List<Map<String, dynamic>> performance = [];
   List<Map<String, dynamic>> holidays = [];
@@ -41,7 +53,16 @@ class _EmployeeNotificationsPageState extends State<EmployeeNotificationsPage> {
     final now = DateTime.now();
     selectedMonth = months[now.month - 1];
     selectedYear = now.year;
+    _markAllAsRead();
     fetchNotifs();
+  }
+
+  Future<void> _markAllAsRead() async {
+    await http.put(
+      Uri.parse(
+        "https://hrm-backend-rm6c.onrender.com/notifications/mark-read/${widget.empId}",
+      ),
+    );
   }
 
   /// 🔹 Main function -> call APIs based on Year and Month
@@ -65,6 +86,53 @@ class _EmployeeNotificationsPageState extends State<EmployeeNotificationsPage> {
       setState(() => error = "Server/network error: $e");
     } finally {
       setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _downloadFile(String url, String fileName) async {
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        Uint8List bytes = response.bodyBytes;
+        String extension = fileName.split('.').last.toLowerCase();
+
+        // This saves the file directly to the device
+        await FileSaver.instance.saveFile(
+          name: fileName.split('.').first,
+          bytes: bytes,
+          ext: extension,
+          mimeType: _getMimeType(extension),
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Downloaded $fileName")));
+        }
+      } else {
+        throw "Fetch failed";
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Download error: $e")));
+      }
+    }
+  }
+
+  MimeType _getMimeType(String ext) {
+    switch (ext) {
+      case 'pdf':
+        return MimeType.pdf;
+      case 'png':
+        return MimeType.png;
+      case 'jpg':
+      case 'jpeg':
+        return MimeType.jpeg;
+      default:
+        return MimeType.other;
     }
   }
 
@@ -99,7 +167,9 @@ class _EmployeeNotificationsPageState extends State<EmployeeNotificationsPage> {
       if (decoded is List) {
         setState(() {
           performance = decoded
-              .where((n) => (n['category'] as String).toLowerCase() == 'performance')
+              .where(
+                (n) => (n['category'] as String).toLowerCase() == 'performance',
+              )
               .cast<Map<String, dynamic>>()
               .toList();
         });
@@ -130,62 +200,76 @@ class _EmployeeNotificationsPageState extends State<EmployeeNotificationsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Sidebar(
-      title: "Employee Notifications",
-      body: Column(
-        children: [
-          _buildHeader(),
-          // 1. Fixed Header Section (Sticky)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Notifications",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+    // We calculate the total count from your three lists
+    final int totalCount =
+        performance.length + message.length + holidays.length;
+
+    return PopScope(
+      canPop: true,
+      // This ensures that when the user goes back, the totalCount is sent to the Dashboard
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          // If you have a back button in your Sidebar, make sure it calls:
+          // Navigator.pop(context, totalCount);
+        }
+      },
+      child: Sidebar(
+        title: "Employee Notifications",
+        body: Column(
+          children: [
+            _buildHeader(),
+            // 1. Fixed Header Section (Sticky)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Notifications",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Row(
-                  children: [
-                    _dropdownYear(),
-                    const SizedBox(width: 10),
-                    _dropdownMonth(),
-                  ],
-                ),
-              ],
+                  Row(
+                    children: [
+                      _dropdownYear(),
+                      const SizedBox(width: 10),
+                      _dropdownMonth(),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          
-          // 2. Scrollable Section
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : error != null
-                      ? Center(
-                          child: Text(
-                            error!,
-                            style: const TextStyle(color: Colors.redAccent),
-                          ),
-                        )
-                      : ListView(
-                          // Removes extra padding from top of list
-                          padding: const EdgeInsets.only(top: 10, bottom: 20),
-                          children: [
-                            notificationCategory("Message", message),
-                            notificationCategory("Performance", performance),
-                            notificationCategory("Holidays", holidays),
-                          ],
+
+            // 2. Scrollable Section
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : error != null
+                    ? Center(
+                        child: Text(
+                          error!,
+                          style: const TextStyle(color: Colors.redAccent),
                         ),
+                      )
+                    : ListView(
+                        // Removes extra padding from top of list
+                        padding: const EdgeInsets.only(top: 10, bottom: 20),
+                        children: [
+                          notificationCategory("Message", message),
+                          notificationCategory("Performance", performance),
+                          notificationCategory("Holidays", holidays),
+                        ],
+                      ),
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ), 
     );
   }
 
@@ -201,7 +285,9 @@ class _EmployeeNotificationsPageState extends State<EmployeeNotificationsPage> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<int>(
           value: selectedYear,
-          items: years.map((y) => DropdownMenuItem(value: y, child: Text("$y"))).toList(),
+          items: years
+              .map((y) => DropdownMenuItem(value: y, child: Text("$y")))
+              .toList(),
           onChanged: (val) {
             if (val != null && val != selectedYear) {
               setState(() => selectedYear = val);
@@ -225,7 +311,9 @@ class _EmployeeNotificationsPageState extends State<EmployeeNotificationsPage> {
         child: DropdownButton<String>(
           value: selectedMonth,
           isExpanded: true,
-          items: months.map((m) => DropdownMenuItem<String>(value: m, child: Text(m))).toList(),
+          items: months
+              .map((m) => DropdownMenuItem<String>(value: m, child: Text(m)))
+              .toList(),
           onChanged: (val) {
             if (val != null && val != selectedMonth) {
               setState(() => selectedMonth = val);
@@ -250,21 +338,34 @@ class _EmployeeNotificationsPageState extends State<EmployeeNotificationsPage> {
           ),
           child: Text(
             title,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         if (list.isEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 12),
-            child: Text("No $title found", style: const TextStyle(color: Colors.white70)),
+            child: Text(
+              "No $title found",
+              style: const TextStyle(color: Colors.white70),
+            ),
           )
         else
-          ...list.asMap().entries.map((entry) => notificationCard(entry.value, entry.key, title.toLowerCase())),
+          ...list.asMap().entries.map(
+            (entry) =>
+                notificationCard(entry.value, entry.key, title.toLowerCase()),
+          ),
       ],
     );
   }
 
-  Widget notificationCard(Map<String, dynamic> notif, int index, String categoryParam) {
+  Widget notificationCard(
+    Map<String, dynamic> notif,
+    int index,
+    String categoryParam,
+  ) {
     final cardKey = "$categoryParam-$index";
     final isExpanded = expandedKey == cardKey;
     final msgContent = notif['message'] as String;
@@ -280,7 +381,8 @@ class _EmployeeNotificationsPageState extends State<EmployeeNotificationsPage> {
         elevation: 2,
         borderRadius: BorderRadius.circular(category == "message" ? 0 : 12),
         child: InkWell(
-          onTap: () => setState(() => expandedKey = isExpanded ? null : cardKey),
+          onTap: () =>
+              setState(() => expandedKey = isExpanded ? null : cardKey),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
@@ -293,7 +395,11 @@ class _EmployeeNotificationsPageState extends State<EmployeeNotificationsPage> {
                       if (category == "message") ...[
                         Text(
                           "From: $senderName ($senderId)",
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
                         ),
                         const SizedBox(height: 4),
                       ],
@@ -301,45 +407,83 @@ class _EmployeeNotificationsPageState extends State<EmployeeNotificationsPage> {
                         msgContent,
                         style: const TextStyle(fontSize: 14),
                         maxLines: isExpanded ? null : 1,
-                        overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                        overflow: isExpanded
+                            ? TextOverflow.visible
+                            : TextOverflow.ellipsis,
                       ),
                       if (isExpanded && attachments.isNotEmpty) ...[
                         const SizedBox(height: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: attachments.map<Widget>((file) {
-                            final String filename = file['originalName'] ?? file['filename'];
-                            final String url = "https://hrm-backend-rm6c.onrender.com/${file['path']}";
-                            final bool isImage = (file['mimetype'] ?? '').startsWith('image/');
+                            final String filename =
+                                file['originalName'] ?? file['filename'];
+                            final String url =
+                                "https://hrm-backend-rm6c.onrender.com/${file['path']}";
+                            final bool isImage = (file['mimetype'] ?? '')
+                                .startsWith('image/');
 
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: InkWell(
-                                onTap: () async {
-                                  final uri = Uri.parse(url);
-                                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                                },
-                                child: Row(
-                                  children: [
-                                    Icon(isImage ? Icons.image : Icons.attach_file, size: 18, color: Colors.deepPurple),
-                                    const SizedBox(width: 6),
-                                    Expanded(child: Text(filename, style: const TextStyle(color: Colors.deepPurple, decoration: TextDecoration.underline), overflow: TextOverflow.ellipsis)),
-                                  ],
-                                ),
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isImage ? Icons.image : Icons.attach_file,
+                                    size: 18,
+                                    color: Colors.deepPurple,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      filename,
+                                      style: const TextStyle(
+                                        color: Colors.deepPurple,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  // THE ACTUAL DOWNLOAD BUTTON
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.download,
+                                      size: 20,
+                                      color: Colors.blue,
+                                    ),
+                                    onPressed: () =>
+                                        _downloadFile(url, filename),
+                                    tooltip: "Download to device",
+                                  ),
+                                ],
                               ),
                             );
                           }).toList(),
                         ),
                       ],
                       if (isExpanded) const SizedBox(height: 8),
-                      if (isExpanded) const Text("Click again to collapse", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      if (isExpanded)
+                        const Text(
+                          "Click again to collapse",
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
                     ],
                   ),
                 ),
                 if (category == "performance")
                   TextButton(
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => ReportsAnalyticsPage())),
-                    style: TextButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (c) => ReportsAnalyticsPage()),
+                    ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                    ),
                     child: const Text("View"),
                   ),
               ],

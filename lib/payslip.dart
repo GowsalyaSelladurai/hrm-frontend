@@ -36,6 +36,17 @@ class _PayslipScreenState extends State<PayslipScreen> {
     'November',
     'December',
   ];
+
+  DateTime safeParseDate(String raw) {
+  try {
+    // ISO format: yyyy-MM-dd
+    return DateTime.parse(raw);
+  } catch (_) {
+    // Fallback: dd-MM-yyyy
+    return DateFormat('dd-MM-yyyy').parse(raw);
+  }
+}
+
   final List<String> _years = ['2024', '2025', '2026'];
 
   int getTotalDaysInMonth(int year, int month) {
@@ -150,8 +161,11 @@ double lopAmount = 0;
   for (final leave in approvedLeaves) {
     if (leave["employeeId"] != employeeId) continue;
 
-    final fromRaw = DateTime.parse(leave["fromDate"]).toLocal();
-    final toRaw = DateTime.parse(leave["toDate"]).toLocal();
+    // final fromRaw = DateTime.parse(leave["fromDate"]).toLocal();
+    // final toRaw = DateTime.parse(leave["toDate"]).toLocal();
+    final fromRaw = safeParseDate(leave["fromDate"]).toLocal();
+final toRaw = safeParseDate(leave["toDate"]).toLocal();
+
 
     final from = DateTime(fromRaw.year, fromRaw.month, fromRaw.day);
     final to = DateTime(toRaw.year, toRaw.month, toRaw.day);
@@ -237,8 +251,11 @@ final lop = absent + extraLeaveLop;
   final rawDate = data['date_of_joining'];
   if (rawDate != null && rawDate is String && rawDate.isNotEmpty) {
     try {
-      final parsedDate = DateTime.parse(rawDate);
-      formattedDate = DateFormat('dd-MM-yyyy').format(parsedDate);
+      // final parsedDate = DateTime.parse(rawDate);
+      // formattedDate = DateFormat('dd-MM-yyyy').format(parsedDate);
+      final parsedDate = safeParseDate(rawDate);
+formattedDate = DateFormat('dd-MM-yyyy').format(parsedDate);
+
     } catch (e) {
       formattedDate = rawDate;
     }
@@ -257,18 +274,18 @@ final lop = absent + extraLeaveLop;
   final otherDeduction =
       double.tryParse(deductions['TotalDeductions']?.toString() ?? "0") ?? 0;
 
-  // double perDaySalary = 0;
-  // if (totalWorkingDays > 0) {
-  //   perDaySalary = gross / totalWorkingDays;
-  // }
+  double perDaySalary = 0;
+  if (totalWorkingDays > 0) {
+    perDaySalary = gross / totalWorkingDays;
+  }
 
-  // lopAmount = perDaySalary * lopDays;
-  // final newNetSalary = gross - otherDeduction - lopAmount;
-  final newNetSalary = gross - otherDeduction;
+  lopAmount = perDaySalary * lopDays;
+  final newNetSalary = gross - otherDeduction - lopAmount;
+  // final newNetSalary = gross - otherDeduction;
 
 
   // ✅ 5) Update deductions map
-  // deductions['LOP Amount'] = lopAmount.toStringAsFixed(2);
+  deductions['LOP Amount'] = lopAmount.toStringAsFixed(2);
   deductions['NetSalary'] = newNetSalary.toStringAsFixed(2);
 
 // get total days in month

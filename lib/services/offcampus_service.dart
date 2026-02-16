@@ -5,7 +5,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:file_picker/file_picker.dart';
 
 class OffCampusService {
-  static const String baseUrl = 'http://localhost:5000'; // CHANGE if needed
+  static const String baseUrl = 'https://hrm-backend-rm6c.onrender.com'; // CHANGE if needed
 
   /// GET all drives
   static Future<List<dynamic>> fetchDrives() async {
